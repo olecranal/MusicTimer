@@ -29,6 +29,8 @@
       ADD_TIMER: "addTimer",
       RENAME_TIMER: "renameTimer",
       DELETE_TIMER: "deleteTimer",
+      LAP: "lap",
+      RENAME_LAP: "renameLap",
     },
   };
 })();

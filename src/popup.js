@@ -20,8 +20,11 @@ const elements = {
   today: document.getElementById("today"),
   clock: document.getElementById("clock"),
   status: document.getElementById("status"),
+  lap: document.getElementById("lap"),
   toggle: document.getElementById("toggle"),
   reset: document.getElementById("reset"),
+  lapSection: document.getElementById("lapSection"),
+  laps: document.getElementById("laps"),
   timers: document.getElementById("timers"),
   addTimer: document.getElementById("addTimer"),
   renameTimer: document.getElementById("renameTimer"),
@@ -38,7 +41,11 @@ const elements = {
 let snapshot = null;
 let lastSyncAt = 0;
 let editingId = null; // timer whose name is being edited inline
+let editingLapId = null; // lap whose name is being edited inline
 let isConfirmingDelete = false;
+
+/** True while an inline name field is open; a background sync would destroy it. */
+const isEditing = () => Boolean(editingId || editingLapId);
 
 /* ---------------------------------------------------------------- formatting */
 
@@ -137,29 +144,141 @@ function renderTimers(liveMs) {
   }
 }
 
-function buildNameInput(timer) {
+/**
+ * An inline name field. Commits on Enter or blur, abandons on Escape.
+ *
+ * `settled` matters: Escape re-renders, which detaches the input and fires blur, which
+ * would otherwise run the commit path we just cancelled.
+ */
+function buildInlineNameInput({ id, value, className, onCommit, onCancel }) {
   const input = document.createElement("input");
-  input.className = "timer-list__input";
-  input.value = timer.name;
+  input.className = className;
+  input.value = value;
   input.maxLength = MAX_TIMER_NAME_LENGTH;
-  input.dataset.id = timer.id;
+  input.dataset.id = id;
 
+  let settled = false;
   const commit = () => {
+    if (settled) return;
+    settled = true;
     const name = input.value.trim();
-    editingId = null;
-    if (name && name !== timer.name) command(MT.ACTION.RENAME_TIMER, { id: timer.id, name });
-    else render();
+    if (name && name !== value) onCommit(name);
+    else onCancel();
+  };
+  const cancel = () => {
+    if (settled) return;
+    settled = true;
+    onCancel();
   };
 
   input.addEventListener("keydown", (event) => {
     if (event.key === "Enter") commit();
-    if (event.key === "Escape") {
-      editingId = null;
-      render();
-    }
+    if (event.key === "Escape") cancel();
   });
   input.addEventListener("blur", commit);
   return input;
+}
+
+function buildNameInput(timer) {
+  return buildInlineNameInput({
+    id: timer.id,
+    value: timer.name,
+    className: "timer-list__input",
+    onCommit: (name) => {
+      editingId = null;
+      command(MT.ACTION.RENAME_TIMER, { id: timer.id, name });
+    },
+    onCancel: () => {
+      editingId = null;
+      render();
+    },
+  });
+}
+
+/* ----------------------------------------------------------------------- laps */
+
+function buildLapRow({ modifier, name, durationMs }) {
+  const row = document.createElement("div");
+  row.className = `lap-list__row lap-list__row--${modifier}`;
+
+  const label = document.createElement("span");
+  label.className = "lap-list__name";
+  label.textContent = name;
+
+  const time = document.createElement("span");
+  time.className = "lap-list__time";
+  time.textContent = formatClock(durationMs);
+
+  row.append(label, time);
+  return row;
+}
+
+/** The lap in progress on top, then completed laps newest first. Hidden until one exists. */
+function renderLaps(liveMs) {
+  const hasLaps = snapshot.laps.length > 0;
+  elements.lapSection.hidden = !hasLaps;
+  if (!hasLaps) return;
+
+  const box = elements.laps;
+  // The local tick must not rebuild a name field the user is typing into.
+  const openInput = box.querySelector("input");
+  if (editingLapId && openInput && openInput.dataset.id === editingLapId) return;
+  box.innerHTML = "";
+
+  box.append(
+    buildLapRow({
+      modifier: "open",
+      name: `${snapshot.currentLap.name} · now`,
+      durationMs: snapshot.currentLap.durationMs + liveMs,
+    })
+  );
+
+  for (const lap of snapshot.laps) {
+    if (lap.id === editingLapId) {
+      const row = document.createElement("div");
+      row.className = "lap-list__row lap-list__row--closed";
+      row.append(
+        buildInlineNameInput({
+          id: lap.id,
+          value: lap.name,
+          className: "lap-list__input",
+          onCommit: (name) => {
+            editingLapId = null;
+            command(MT.ACTION.RENAME_LAP, { id: lap.id, name });
+          },
+          onCancel: () => {
+            editingLapId = null;
+            render();
+          },
+        })
+      );
+      box.append(row);
+      const input = row.querySelector("input");
+      input.focus();
+      input.select();
+      continue;
+    }
+
+    const row = buildLapRow({ modifier: "closed", name: lap.name, durationMs: lap.durationMs });
+    // A div with a click handler is invisible to the keyboard. The timer rows have the
+    // same problem (CONFORMANCE U-01/U-07, deferred to a UI pass); no reason to add more.
+    row.setAttribute("role", "button");
+    row.tabIndex = 0;
+    row.setAttribute("aria-label", `Rename lap ${lap.name}`);
+
+    const beginRename = () => {
+      editingLapId = lap.id;
+      render();
+    };
+    row.addEventListener("click", beginRename);
+    row.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        beginRename();
+      }
+    });
+    box.append(row);
+  }
 }
 
 function renderTabs() {
@@ -194,6 +313,7 @@ function render() {
   elements.toggle.textContent = snapshot.running ? "Stop" : "Start";
   elements.toggle.classList.toggle("stop", snapshot.running);
 
+  renderLaps(liveMs);
   renderTimers(liveMs);
 
   elements.deleteTimer.textContent = isConfirmingDelete ? "Sure?" : "Delete";
@@ -239,6 +359,7 @@ async function sync(message = { type: MT.MESSAGE.GET }) {
 elements.toggle.addEventListener("click", () =>
   command(snapshot?.running ? MT.ACTION.STOP : MT.ACTION.START)
 );
+elements.lap.addEventListener("click", () => command(MT.ACTION.LAP));
 elements.reset.addEventListener("click", () => command(MT.ACTION.RESET));
 
 elements.addTimer.addEventListener("click", async () => {
@@ -283,6 +404,6 @@ elements.clearFilter.addEventListener("click", () => command(MT.ACTION.CLEAR_FIL
 
 setInterval(render, LOCAL_TICK_MS);
 setInterval(() => {
-  if (!editingId) sync(); // a background sync would blow away the rename input
+  if (!isEditing()) sync(); // a background sync would blow away an open rename field
 }, SYNC_INTERVAL_MS);
 sync();

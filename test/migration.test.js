@@ -37,5 +37,40 @@ const V1 = {
   s = await get();
   check("migration is not repeated", s.timers.length, 2);
 
+  // Timers saved before laps shipped have no `laps` / `lapStartMs` at all.
+  const PRE_LAPS = {
+    "mt.state": {
+      version: 2,
+      activeId: "t1",
+      order: ["t1"],
+      timers: {
+        t1: {
+          id: "t1",
+          name: "Work",
+          mode: "auto",
+          filter: null,
+          running: false,
+          runningSince: null,
+          accumulatedMs: 90 * 60 * 1000,
+          armed: false,
+          rearmBlocked: false,
+          daily: {},
+          lastActive: null,
+        },
+      },
+    },
+  };
+
+  const preLaps = createWorker({ seedLocal: PRE_LAPS });
+  let older = await preLaps.get();
+  check("a pre-lap timer keeps its total", Math.round(older.elapsedMs / 60000), 90);
+  check("and gains an empty lap history", older.laps.length, 0);
+  check("with the open lap covering everything so far", Math.round(older.currentLap.durationMs / 60000), 90);
+
+  await preLaps.cmd("lap");
+  older = await preLaps.get();
+  check("lapping a pre-lap timer banks the time it already had", Math.round(older.laps[0].durationMs / 60000), 90);
+  check("named from its timer", older.laps[0].name, "Work - lap 1");
+
   finish();
 })();

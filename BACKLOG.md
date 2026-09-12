@@ -21,15 +21,8 @@ Notes for whoever builds it:
 - The same rewind has to correct `daily[today]`, which is committed separately.
 - Worth capping the list (a few hundred entries) so storage doesn't grow without bound.
 
-## 2. Laps, like a stopwatch
+## 2. ~~Laps~~ — shipped
 
-**Idea:** a Lap button that splits the running timer. Each lap gets a name, defaulting to
-`<parent timer> - lap N`, and can be renamed.
-
-Notes for whoever builds it:
-- A lap is a `{ id, name, startedAtMs, endedAtMs }` range within its parent timer's elapsed
-  time, so laps survive a rewind (idea 1) and can be recomputed from it.
-- Popup needs somewhere to show laps for the active timer without crowding the timer list —
-  probably a collapsible section under the clock.
-- Decide whether lapping while paused is allowed (a stopwatch lets you; it just makes a
-  zero-length lap).
+Built on the `laps` branch: Lap is now the primary button, laps are stored as offsets into
+the parent timer's elapsed time, default to `<timer> - lap N`, and are renameable. Idea 1
+below still has to keep them consistent when it rewinds.

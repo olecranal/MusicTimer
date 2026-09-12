@@ -16,9 +16,16 @@
     <div class="status" id="status">Waiting for music…</div>
 
     <div class="row row--buttons">
-      <button id="toggle" class="primary">Start</button>
-      <button id="reset">Reset</button>
+      <button id="lap" class="primary">Lap</button>
+      <button id="toggle" class="ghost">Start</button>
+      <button id="reset" class="ghost">Reset</button>
     </div>
+
+    <section id="lapSection" hidden>
+      <h2>Laps</h2>
+      <div class="lap-list" id="laps"></div>
+      <p class="hint">Click a lap to rename it.</p>
+    </section>
 
     <section>
       <h2>Timers</h2>

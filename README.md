@@ -32,11 +32,21 @@ pick it in the **Timers** list, or let it pick itself (below). Use **+ New**, **
 **Use current**. From then on only that playlist moves the clock; anything else is ignored
 (the popup says so: *"Music is playing, but not from …"*). Press **Any music** to clear it.
 
+**5. Laps.** **Lap** splits the active timer the way a stopwatch does: it closes the
+stretch you were in and opens the next one, leaving the running total alone. Each lap is
+named `<timer> - lap N` and can be renamed by clicking it (or focusing it and pressing
+Enter). Laps measure counted time, so a pause in the music does not inflate them. They are
+per-timer, and **Reset** clears them along with the total.
+
 **Auto-switching.** A timer bound to a playlist takes over automatically when that playlist
 starts. Bind `Work` to your focus playlist and `Gaming` to your hype mix, and the music
 routes your time for you. If you override it by hand, the choice sticks — auto-switching
 won't undo it while that same playlist is still playing, and claims again only once the
 playlist stops and starts afresh. Timers with no playlist bound never auto-claim.
+
+The primary button is **Lap**, because in "Follow the music" mode starting and stopping is
+the music's job. **Stop** is still there as a manual override, which is what makes "Only
+when I say" mode work at all.
 
 The badge on the toolbar icon shows elapsed minutes, green while the clock runs. The popup
 also shows a running total for the day, for the active timer.
@@ -78,7 +88,8 @@ src/shared/logger.js     structured logging, shared by all three contexts
 src/shared/contract.js   the message types and command names they agree on
 test/harness.js          stubbed chrome API + fake clock
 test/background.test.js  clock, modes, playlist filter, multi-timer routing
-test/migration.test.js   upgrading from the single-timer v1 layout
+test/migration.test.js   upgrading from older stored layouts
+test/laps.test.js        lap splitting, naming, isolation and reset
 docs/BEST_PRACTICES.md   the standards this code is written against
 docs/CONFORMANCE.md      those standards as checkable requirements + an audit log
 BACKLOG.md               ideas raised but not built yet
@@ -98,7 +109,7 @@ session rather than once a second.
 ## Tests
 
 ```bash
-node test/background.test.js && node test/migration.test.js
+node test/background.test.js && node test/migration.test.js && node test/laps.test.js
 ```
 
 Runs the real `background.js` against a stubbed `chrome` API and a fake clock, covering

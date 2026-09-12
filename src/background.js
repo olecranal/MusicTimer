@@ -34,7 +34,14 @@ const newTimer = (name) => ({
   rearmBlocked: false, // sticky: stopped by hand; wait for silence before re-arming
   daily: {}, // "YYYY-MM-DD" -> ms committed that day
   lastActive: null, // last thing counted: { siteLabel, title, artist, contextName }
+  laps: [], // closed laps: { id, name, startMs, endMs } as offsets into elapsed time
+  lapStartMs: 0, // elapsed offset where the lap in progress began
 });
+
+const MAX_NAME_LENGTH = 40;
+
+/** Laps are offsets into elapsed time, so they survive pauses and never depend on wall clock. */
+const lapDefaultName = (timer) => `${timer.name} - lap ${timer.laps.length + 1}`;
 
 /* ------------------------------------------------------------------ storage */
 
@@ -68,6 +75,14 @@ function normalize(raw) {
   if (!state.timers[state.activeId]) {
     log.warn("state:active-id-missing", { activeId: state.activeId, fallback: state.order[0] });
     state.activeId = state.order[0];
+  }
+
+  // Timers stored before laps existed have neither field; give them an empty lap history
+  // rather than letting `undefined` reach the arithmetic below.
+  for (const id of state.order) {
+    const timer = state.timers[id];
+    if (!Array.isArray(timer.laps)) timer.laps = [];
+    if (typeof timer.lapStartMs !== "number") timer.lapStartMs = 0;
   }
   state.version = 2;
   return state;
@@ -308,7 +323,37 @@ async function command(msg) {
       timer.accumulatedMs = 0;
       timer.armed = false;
       timer.rearmBlocked = true;
+      // Laps are offsets into a total that no longer exists, so they go with it.
+      timer.laps = [];
+      timer.lapStartMs = 0;
       break;
+
+    case MT.ACTION.LAP: {
+      // Close the lap in progress at wherever the clock stands and open the next one.
+      // A stopwatch lets you lap while paused; that just records a zero-length lap.
+      const at = elapsedMs(timer);
+      const lap = {
+        id: "l" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        name: lapDefaultName(timer),
+        startMs: timer.lapStartMs,
+        endMs: at,
+      };
+      timer.laps.push(lap);
+      timer.lapStartMs = at;
+      log.info("lap:recorded", { timerId: timer.id, name: lap.name, durationMs: lap.endMs - lap.startMs });
+      break;
+    }
+
+    case MT.ACTION.RENAME_LAP: {
+      const lap = timer.laps.find((l) => l.id === msg.id);
+      if (!lap) {
+        log.warn("lap:rename-missing", { timerId: timer.id, lapId: msg.id });
+        break;
+      }
+      const name = (msg.name || "").trim();
+      if (name) lap.name = name.slice(0, MAX_NAME_LENGTH);
+      break;
+    }
 
     case MT.ACTION.SET_MODE:
       if (msg.mode === "auto" || msg.mode === "sticky") {
@@ -349,7 +394,7 @@ async function command(msg) {
     case MT.ACTION.RENAME_TIMER: {
       const t = state.timers[msg.id] || timer;
       const name = (msg.name || "").trim();
-      if (name) t.name = name.slice(0, 40);
+      if (name) t.name = name.slice(0, MAX_NAME_LENGTH);
       break;
     }
 
@@ -413,6 +458,15 @@ async function snapshotForPopup() {
     running: timer.running,
     elapsedMs: elapsedMs(timer),
     todayMs: todayMs(timer),
+    // Newest first: the lap you just took is the one you want to read or rename.
+    laps: timer.laps
+      .map((lap) => ({ id: lap.id, name: lap.name, durationMs: Math.max(0, lap.endMs - lap.startMs) }))
+      .reverse(),
+    currentLap: {
+      name: lapDefaultName(timer),
+      // The popup adds its own live offset on top, the same way it does for the clock.
+      durationMs: Math.max(0, elapsedMs(timer) - timer.lapStartMs),
+    },
     anyPlaying: Boolean(state.anyPlaying),
     eligible: Boolean(state.eligible),
     lastActive: timer.lastActive,
