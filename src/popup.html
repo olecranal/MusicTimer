@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Music Timer</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <span class="dot" id="dot"></span>
+      <h1 id="activeName">Music Timer</h1>
+      <span class="today" id="today">today 0m</span>
+    </header>
+
+    <div class="clock" id="clock">0:00:00</div>
+    <div class="status" id="status">Waiting for music…</div>
+
+    <div class="row row--buttons">
+      <button id="toggle" class="primary">Start</button>
+      <button id="reset">Reset</button>
+    </div>
+
+    <section>
+      <h2>Timers</h2>
+      <div class="timer-list" id="timers"></div>
+      <div class="row">
+        <button id="addTimer">+ New</button>
+        <button id="renameTimer">Rename</button>
+        <button id="deleteTimer" class="ghost">Delete</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>When the timer stops</h2>
+      <div class="mode-switch" id="mode">
+        <button data-mode="auto" class="on">Follow the music</button>
+        <button data-mode="sticky">Only when I say</button>
+      </div>
+      <p class="hint" id="modeHint">Runs while music plays, pauses the moment it stops.</p>
+    </section>
+
+    <section>
+      <h2>Count only one playlist</h2>
+      <div class="filter" id="filter">
+        <div class="filter__name" id="filterName">Any music counts</div>
+        <div class="filter__source" id="filterSub"></div>
+      </div>
+      <div class="row">
+        <button id="useCurrent">Use current</button>
+        <button id="clearFilter" class="ghost">Any music</button>
+      </div>
+      <p class="hint">A timer bound to a playlist takes over automatically when that playlist plays.</p>
+    </section>
+
+    <footer id="tabs"></footer>
+
+    <script src="shared/logger.js"></script>
+    <script src="shared/contract.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

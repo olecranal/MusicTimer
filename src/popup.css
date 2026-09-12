@@ -1,0 +1,295 @@
+:root {
+  --bg: #16171c;
+  --panel: #1e2026;
+  --line: #2c2f38;
+  --text: #eceef3;
+  --muted: #9aa0ad;
+  --accent: #1db954;
+  --accent-dim: #14622f;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 300px;
+  margin: 0;
+  padding: 14px;
+  background: var(--bg);
+  color: var(--text);
+  font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+header h1 {
+  font-size: 13px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+  letter-spacing: 0.02em;
+}
+
+.today {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #4a4f5c;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+
+.dot--live {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.18);
+}
+
+.clock {
+  font-size: 40px;
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  text-align: center;
+  padding: 6px 0 2px;
+}
+
+.status {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  min-height: 34px;
+  white-space: pre-line;
+  padding: 0 4px 8px;
+  overflow-wrap: anywhere;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+}
+
+.row--buttons {
+  margin-bottom: 14px;
+}
+
+button {
+  flex: 1;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--panel);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+button:hover {
+  background: #262932;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #08210f;
+  font-weight: 600;
+}
+
+button.primary:hover {
+  background: #23cc61;
+}
+
+button.primary.stop {
+  background: transparent;
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+button.ghost {
+  background: transparent;
+  color: var(--muted);
+}
+
+section {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-bottom: 12px;
+}
+
+section h2 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin: 0 0 8px;
+}
+
+.mode-switch {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.mode-switch button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mode-switch button + button {
+  border-left: 1px solid var(--line);
+}
+
+.mode-switch button.on {
+  background: var(--accent-dim);
+  color: #d8ffe6;
+}
+
+.hint {
+  margin: 7px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.filter {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+
+.filter__name {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.filter__source {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.filter__source:empty {
+  display: none;
+}
+
+footer {
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tab-row {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.tab-row__state--playing {
+  color: var(--accent);
+}
+
+/* ----------------------------------------------------------- timer list */
+
+.timer-list {
+  max-height: 148px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  margin-bottom: 8px;
+}
+
+.timer-list__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+
+.timer-list__row:last-child {
+  border-bottom: 0;
+}
+
+.timer-list__row:hover {
+  background: #23262e;
+}
+
+.timer-list__row--active {
+  background: var(--accent-dim);
+}
+
+.timer-list__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timer-list__row--active .timer-list__name {
+  font-weight: 600;
+}
+
+.timer-list__binding {
+  font-size: 10px;
+  color: var(--muted);
+  flex: none;
+  max-width: 84px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timer-list__row--active .timer-list__binding {
+  color: #9fd9b4;
+}
+
+.timer-list__time {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--muted);
+  flex: none;
+}
+
+.timer-list__row--active .timer-list__time {
+  color: var(--text);
+}
+
+.timer-list__live {
+  color: var(--accent);
+  flex: none;
+}
+
+.timer-list__input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--accent);
+  background: var(--bg);
+  color: var(--text);
+}
+
+button.danger {
+  border-color: #7a2f33;
+  color: #ff9ea3;
+}

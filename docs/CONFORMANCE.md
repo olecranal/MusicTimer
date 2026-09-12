@@ -1,0 +1,423 @@
+# Conformance Checklist
+
+Machine-runnable form of [BEST_PRACTICES.md](BEST_PRACTICES.md). Where that document
+explains *why*, this one states **what must be true** and **how to prove it**.
+
+## How to run this audit
+
+Give an LLM this prompt:
+
+> Audit this repository against `docs/CONFORMANCE.md`. Work through every requirement in
+> order. For each, run the stated Check, then record PASS, FAIL, or N/A with one line of
+> evidence (file:line). Do not report anything listed under "Accepted debt" unless the
+> reason given there has stopped being true. Output a table, then a short list of only the
+> FAILs, ranked by the severity column.
+
+Rules for the auditor:
+
+- **Evidence or it didn't happen.** Every verdict cites a file and line, or the exact
+  command run and its output. "Looks fine" is not a verdict.
+- **A Check that finds nothing is a PASS only if the Check was capable of finding
+  something.** Confirm the grep pattern matches at least one known-good instance first.
+- **Do not fix anything during an audit.** Report only. Fixing is a separate pass.
+- **N/A requires a reason.** e.g. "no React in this project".
+
+Severity: **S1** correctness or accessibility failure · **S2** will cause a debugging dead
+end · **S3** maintainability drag.
+
+---
+
+## R — Readability
+
+### R-01 — No `var` · S3
+**Requirement:** `var` is never used.
+**Check:** `grep -rnE "\bvar\b" --include=*.js src/`  (JS only — CSS `var(--x)` is not this)
+**Fails if:** any match outside a comment or string.
+
+### R-02 — Units in numeric names · S2
+**Requirement:** Any identifier holding a number with a unit names that unit
+(`Ms`, `Sec`, `Px`, `Pct`, `Count`).
+**Check:** Read every `const`/`let` declaration and parameter whose value is numeric.
+**Fails if:** a duration, size, or percentage is named without its unit (`delay`, `timeout`,
+`width` where the value is a number).
+
+### R-03 — No abbreviated identifiers · S3
+**Requirement:** Identifiers are whole words. Permitted exceptions: loop indices `i`/`j`,
+a single-purpose `$` DOM helper, `el`, `id`, `ms`, and conventional short names in a
+2-line arrow function.
+**Check:** Read all top-level declarations and exported names in `src/`.
+**Fails if:** a name is a truncation (`fmt`, `cfg`, `btn`, `hdlr`, `tmr`, `seg`, `snap`).
+
+### R-04 — Booleans read as assertions · S3
+**Requirement:** Boolean variables and returns start `is`/`has`/`can`/`should`, or are an
+unambiguous adjective (`playing`, `running`, `eligible`, `weak`).
+**Check:** Read boolean declarations and object fields.
+**Fails if:** a boolean is named as a noun (`flag`, `status`, `state`).
+
+### R-05 — No magic numbers · S3
+**Requirement:** Every numeric literal other than `0`, `1`, `-1`, `2`, `100`, and array
+indices is a named constant declared at module top.
+**Check:** `grep -rnE "[^a-zA-Z0-9_.\"'][0-9]{3,}" src/`
+**Fails if:** a multi-digit literal appears inline in a function body.
+**Exempt:** CSS values, colour hex, and literals inside a `test/` fixture.
+
+### R-06 — No duplicated string literals across files · S2
+**Requirement:** A string used in more than one file is a named constant in one shared
+module, imported by the rest. Applies especially to message types and command names.
+**Check:** Extract all quoted literals from `src/`, count files each appears in.
+**Fails if:** any literal appears in two or more files as a raw literal.
+
+### R-07 — Comments explain why · S3
+**Requirement:** Comments state rationale, constraint, or non-obvious consequence.
+**Check:** Read every comment in `src/`.
+**Fails if:** a comment restates the line below it, or a non-obvious constant has no
+justification.
+
+### R-08 — No commented-out code · S3
+**Check:** `grep -rnE "^\s*(//|/\*)\s*(const|let|function|if|for|return|await|chrome\.)" src/`
+**Fails if:** any match.
+
+### R-09 — File size · S3
+**Requirement:** No file in `src/` exceeds 300 lines without an entry in Accepted debt.
+**Check:** `wc -l src/**/*.js src/*.css`
+**Fails if:** over 300 and unlisted.
+
+### R-10 — CSS naming is one convention · S3
+**Requirement:** All CSS class names are kebab-case. Components with internal parts use
+BEM (`block__element`, `block--modifier`). Bare element selectors are allowed for
+`button`, `header`, `section`, `footer`.
+**Check:** `grep -oE "\.[A-Za-z][A-Za-z0-9_-]*" src/*.css | sort -u`
+**Fails if:** any class contains an uppercase letter, or a component has parts styled via
+descendant selectors on generic names (`.thing .name`).
+
+### R-11 — No class-name collisions across meanings · S2
+**Requirement:** A class name means one thing. The same modifier word must not be reused
+for two unrelated states on two unrelated blocks.
+**Check:** For each class used in two or more rules, confirm one meaning.
+**Fails if:** e.g. `.live` styles both a status dot and a list row.
+
+### R-12 — No raw values in component CSS · S3
+**Requirement:** Colours, spacing, and radii in component rules reference a `:root` custom
+property.
+**Check:** `grep -nE "#[0-9a-fA-F]{3,8}|rgba?\(" src/*.css`
+**Fails if:** a hex or rgb() value appears outside the `:root` block.
+**Exempt:** documented one-off states listed in Accepted debt.
+
+---
+
+## S — Scalability
+
+### S-01 — Platform APIs are wrapped · S3
+**Requirement:** `chrome.storage` is never called from feature logic; it is reached through
+a named accessor pair (get/put) in one place per store.
+**Check:** `grep -rn "chrome.storage" src/`
+**Fails if:** matches appear in more than one file, or inside a branch of business logic.
+
+### S-02 — One owner per piece of state · S1
+**Requirement:** No value is stored in two places. Derived values are computed, not cached.
+**Check:** Read the persisted state shape and every in-memory variable.
+**Fails if:** the same fact (e.g. elapsed time) is both stored and recomputed from a
+second stored field that could disagree.
+
+### S-03 — Logic is separable from the DOM · S2
+**Requirement:** No module contains both business rules and `document.*` calls.
+**Check:** For each file, `grep -c "document\.\|getElementById" ` and read for branching logic.
+**Fails if:** a file both queries the DOM and decides application behaviour.
+**N/A:** for files that are purely a view.
+
+### S-04 — Features do not import from features · S3
+**Requirement:** Shared code lives in `src/shared/`. No file in one feature references
+another feature's internals.
+**Check:** Read import/`importScripts`/script-tag graph.
+**Fails if:** a cycle exists, or a cross-feature reference is not via `shared/`.
+
+### S-05 — Shared module stays small · S3
+**Requirement:** Every file in `src/shared/` is used by two or more contexts.
+**Check:** For each shared file, count referencing files.
+**Fails if:** a shared file has one consumer (it belongs to that consumer).
+
+### S-06 — Persisted data is versioned · S1
+**Requirement:** Anything written to durable storage carries a schema version, and a
+migration exists for every version ever shipped.
+**Check:** Read the normalize/migrate function; confirm a test seeds each old shape.
+**Fails if:** no version field, or a shipped version has no migration test.
+
+### S-07 — DOM lookups are not repeated per frame · S3
+**Requirement:** Elements referenced on every render are looked up once at init.
+**Check:** Read the render path for `getElementById` / `querySelector` calls.
+**Fails if:** a lookup for a static element occurs inside a function called on a timer.
+
+### S-08 — No abstraction with one caller · S3
+**Requirement:** Rule of three — a helper exists because it has three uses, or because it
+isolates a platform dependency.
+**Check:** For each helper, count call sites.
+**Fails if:** a single-use indirection exists purely for structure.
+
+### S-09 — No premature restructuring · S3
+**Requirement:** Folder depth is justified by file count. Under ~10 source files, flat is
+correct.
+**Check:** `find src -type f | wc -l` against directory depth.
+**Fails if:** nesting exceeds what the file count warrants.
+
+---
+
+## D — Debugging
+
+### D-01 — A logger exists and is shared · S2
+**Requirement:** One logging module, used by every execution context.
+**Check:** `grep -rln "log\.\(debug\|info\|warn\|error\)" src/`
+**Fails if:** no logger module, or any context uses bare `console.*`.
+
+### D-02 — Log lines are structured · S2
+**Requirement:** Every log call is `log.<level>("namespace:event", contextObject)`. The
+event string is a stable identifier, not interpolated prose.
+**Check:** Read every `log.` call site.
+**Fails if:** an event string contains a template literal or variable interpolation, or the
+second argument is a string rather than an object.
+
+### D-03 — No silent catch · S1
+**Requirement:** Every `catch` block does at least one of: rethrow, log, or carry an
+`// intentional-silent:` annotation giving the reason.
+**Check:** `grep -rn "catch" src/` then read each block.
+**Fails if:** a catch body has no `log.`, no `throw`, and no annotation.
+
+### D-04 — Global error handlers in every context · S2
+**Requirement:** Each of service worker, content script, and popup installs handlers for
+uncaught errors and unhandled rejections.
+**Check:** `grep -rn "unhandledrejection\|addEventListener(\"error\"" src/`
+**Fails if:** fewer than one per context.
+
+### D-05 — Unknown inputs are loud · S1
+**Requirement:** Every `switch` over an external input has a `default` that logs at `warn`
+or above. Every message handler rejects unrecognised types visibly.
+**Check:** `grep -rn "default:" src/`
+**Fails if:** a default silently breaks or returns.
+
+### D-06 — Platform error channels are read · S2
+**Requirement:** `chrome.runtime.lastError` is checked and surfaced, not discarded.
+**Check:** `grep -rn "lastError" src/`
+**Fails if:** a reference exists whose only effect is to suppress the warning.
+
+### D-07 — Degradation is observable · S1
+**Requirement:** Any code path that silently falls back to reduced functionality (a drifted
+selector, a missing element, a failed detection) logs at `warn` the first time it happens.
+**Check:** Identify every fallback branch; confirm each has a log.
+**Fails if:** a fallback is reachable with no signal.
+
+### D-08 — Log volume is bounded · S2
+**Requirement:** No log line can be emitted by a polling loop on every tick. Repeating
+conditions use a once-per-key or throttled emitter.
+**Check:** Trace every `log.` call to whether a timer can reach it.
+**Fails if:** an unthrottled log sits in a `setInterval` body or a per-tick function.
+
+### D-09 — Levels are honest and adjustable · S3
+**Requirement:** A single switch changes verbosity for the whole extension without editing
+call sites.
+**Check:** Confirm a `setLevel` (or equivalent) exists and is reachable.
+**Fails if:** silencing logs requires deleting or commenting them.
+
+### D-10 — Time and randomness are injectable · S2
+**Requirement:** Logic that depends on the clock can be driven by a test.
+**Check:** Confirm tests advance a fake clock rather than sleeping.
+**Fails if:** any test contains a real `setTimeout`/sleep to wait for logic.
+
+### D-11 — Detection and parsing layers have tests · S1
+**Requirement:** Any module that reads an external structure it does not control (DOM
+selectors, URLs, API shapes) has tests against captured fixtures.
+**Check:** `ls test/` against `ls src/`.
+**Fails if:** a parsing/detection module has no corresponding test file.
+
+### D-12 — Tests assert behaviour, not implementation · S3
+**Requirement:** Tests exercise the real module under a stubbed platform, not a
+reimplementation of it.
+**Check:** Read the harness for what it stubs.
+**Fails if:** the harness reimplements logic that the test then asserts.
+
+---
+
+## U — UI
+
+### U-01 — Interactive elements are interactive elements · S1
+**Requirement:** Anything with a click handler is a `<button>`, `<a href>`, or an input —
+or carries a role, `tabindex="0"`, and Enter/Space handling.
+**Check:** `grep -rn "addEventListener(\"click\"" src/` and read what it is attached to.
+**Fails if:** a `<div>`/`<span>` receives a click handler without the full treatment.
+
+### U-02 — Visible focus everywhere · S1
+**Requirement:** A `:focus-visible` rule exists and is not overridden to `outline: none`
+anywhere.
+**Check:** `grep -n "focus-visible\|outline" src/*.css`
+**Fails if:** no `:focus-visible` rule, or any `outline: none` without a replacement
+indicator.
+
+### U-03 — Focus indicator contrast · S1
+**Requirement:** The focus indicator has ≥3:1 contrast against the adjacent background.
+**Check:** Compute the ratio between the outline colour and the surface behind it.
+**Fails if:** below 3:1.
+
+### U-04 — Dynamic status is announced · S1
+**Requirement:** Regions whose text changes without user action carry `aria-live="polite"`.
+**Check:** `grep -n "aria-live" src/*.html` against elements written to in the render path.
+**Fails if:** a live-updating region has no live region role.
+
+### U-05 — Reduced motion respected · S2
+**Requirement:** A `@media (prefers-reduced-motion: reduce)` block neutralises transitions
+and animations.
+**Check:** `grep -n "prefers-reduced-motion" src/*.css`
+**Fails if:** transitions or animations exist with no such block.
+
+### U-06 — Text contrast · S1
+**Requirement:** 4.5:1 for body text, 3:1 for large text and UI boundaries.
+**Check:** Compute ratios for every foreground/background token pairing actually used.
+**Fails if:** any pairing falls short.
+
+### U-07 — Keyboard reachability of every feature · S1
+**Requirement:** Every action available by mouse is reachable and operable by keyboard
+alone, in a logical tab order, with no traps.
+**Check:** Enumerate every user action; trace a keyboard path to each.
+**Fails if:** any action is mouse-only.
+
+### U-08 — Destructive actions are confirmed and escapable · S2
+**Requirement:** A destructive action requires confirmation, and the pending confirmation
+can be cancelled by Escape or by clicking away.
+**Check:** Read the handler.
+**Fails if:** the pending state has no cancel path.
+
+### U-09 — Five states exist · S2
+**Requirement:** Every surface has idle, focus, loading/pending, empty, and error
+presentations.
+**Check:** Read the render path for each region.
+**Fails if:** a region can render blank with no explanatory text.
+
+### U-10 — Document metadata · S3
+**Requirement:** `lang` on `<html>`, a `<title>`, a `<label>` or `aria-label` on every
+input.
+**Check:** Read the HTML.
+**Fails if:** any missing.
+
+---
+
+## M — Manifest V3
+
+### M-01 — No state in service-worker globals · S1
+**Requirement:** No mutable module-level variable in the service worker holds data that
+must outlive an event.
+**Check:** Read all top-level `let`/`const` in the worker.
+**Fails if:** any is written to from a handler and read by a later one.
+
+### M-02 — Listeners registered synchronously · S1
+**Requirement:** Every `chrome.*.addListener` call is at the top level of the worker script,
+not inside a callback, `then`, or after an `await`.
+**Check:** `grep -n "addListener" src/background.js` and check indentation/scope.
+**Fails if:** any is nested.
+
+### M-03 — Async responders return true · S1
+**Requirement:** Every `onMessage` branch that calls `sendResponse` asynchronously returns
+`true` on the synchronous path.
+**Check:** Read every branch of the message listener.
+**Fails if:** a branch resolves a promise into `sendResponse` without returning `true`.
+
+### M-04 — Scheduling survives termination · S1
+**Requirement:** Recurring work in the worker uses `chrome.alarms`, never
+`setTimeout`/`setInterval`.
+**Check:** `grep -n "setTimeout\|setInterval" src/background.js`
+**Fails if:** any match.
+
+### M-05 — Minimal permissions · S2
+**Requirement:** Every entry in `permissions` and `host_permissions` is used.
+**Check:** For each permission, grep for the API that needs it.
+**Fails if:** a permission has no corresponding call site.
+
+### M-06 — No inline script · S1
+**Check:** `grep -n "onclick=\|javascript:\|<script>" src/*.html`
+**Fails if:** any match.
+
+---
+
+## T — Timing
+
+### T-01 — Elapsed time derives from timestamps · S1
+**Requirement:** Durations are computed as `end - start`, never accumulated per tick.
+**Check:** Read the clock module.
+**Fails if:** a variable is incremented by a fixed interval amount.
+
+### T-02 — Correct clock for the job · S2
+**Requirement:** `performance.now()` for measuring an interval within one page life;
+a stored absolute epoch for deadlines that must survive reload or worker death.
+**Check:** Read every `Date.now()` / `performance.now()` call.
+**Fails if:** `Date.now()` is used for an interval measurement that a clock adjustment
+could corrupt, or `performance.now()` is persisted.
+
+### T-03 — Throttling assumptions are documented · S2
+**Requirement:** Any reliance on a browser not throttling a timer is stated in a comment
+naming the condition that makes it safe.
+**Check:** Read every `setInterval` in a page context.
+**Fails if:** the interval is load-bearing and the exemption it relies on is unstated.
+
+---
+
+## Accepted debt
+
+Deviations that are known, deliberate, and not to be re-reported. Each needs a reason and a
+trigger that would make it worth fixing.
+
+| Req | Where | Reason | Revisit when |
+|---|---|---|---|
+| R-09 | `src/background.js` (491 lines) | Section-banner comments keep it navigable; splitting it would introduce untested seams in the only correctness-critical module. Doc §2.8 — don't restructure before the pain is real. | It passes ~600 lines, or a second person works on it regularly |
+| R-09 | `src/content.js` (348 lines) | Three site adapters in one file, each a self-contained object literal. Splitting them per-site would create three ~80-line files and a loader, for no reader benefit while they share the same detection core. | A fourth site is added, or an adapter grows past ~120 lines |
+| S-09 | `src/` is near-flat | 6 source files. Feature-first folders would be premature per doc §2.8. | Source files exceed ~10, or a second feature appears |
+| R-12 | `src/popup.css` one-off surface tints | Hover/active tints that exist in exactly one rule each. | A third consumer of the same value appears |
+
+---
+
+## Baseline audit — 2026-09-12
+
+Run after the readability/scalability/debugging iteration.
+
+| Req | Verdict | Evidence |
+|---|---|---|
+| R-01 | PASS | no `var` in `src/` |
+| R-02 | PASS | `HEARTBEAT_MS`, `POLL_MS`, `STALE_MS`, `LOCAL_TICK_MS`, `SYNC_INTERVAL_MS` |
+| R-03 | PASS | `fmt`→`formatClock`, `fmtShort`→`formatCompact`, `snap`→`snapshot`, `.seg`→`.mode-switch` |
+| R-04 | PASS | `running`, `eligible`, `armed`, `isConfirmingDelete` |
+| R-05 | PASS | popup intervals named |
+| R-06 | PASS | `src/shared/contract.js` |
+| R-07 | PASS | — |
+| R-08 | PASS | — |
+| R-09 | debt | background.js, see table above |
+| R-10 | PASS | kebab-case + BEM in `popup.css` |
+| R-11 | PASS | `.live` split into `.dot--live` / `.timer-list__live` |
+| R-12 | debt | see table above |
+| S-01 | PASS | `chrome.storage` only in `background.js` accessors |
+| S-02 | PASS | elapsed derived, never stored twice |
+| S-03 | FAIL | `popup.js` mixes transport, view state, and DOM — S3, deferred |
+| S-04 | PASS | `shared/` only |
+| S-05 | PASS | both shared files used by 3 contexts |
+| S-06 | PASS | `version: 2` + `test/migration.test.js` |
+| S-07 | PASS | `elements` cached at init |
+| S-08 | PASS | — |
+| S-09 | debt | see table above |
+| D-01 | PASS | `src/shared/logger.js` |
+| D-02 | PASS | all call sites `namespace:event` + object |
+| D-03 | PASS | all catches log or annotated |
+| D-04 | PASS | `installGlobalErrorHandlers()` in all 3 contexts |
+| D-05 | PASS | `command:unknown-action` warn |
+| D-06 | PASS | `runtime:last-error` warn-once |
+| D-07 | PASS | `adapter:*-failed`, `source:stale`, `snapshot:empty` |
+| D-08 | PASS | `warnOnce` on all poll-reachable paths |
+| D-09 | PASS | `mtLogger.setLevel` / `MT_LOG_LEVEL` |
+| D-10 | PASS | harness `Date.now` proxy + `advance()` |
+| D-11 | **FAIL** | `src/content.js` adapters still have no fixture tests — S1 |
+| D-12 | PASS | harness stubs `chrome` only |
+| U-01 | **FAIL** | timer rows are `<div>` with click handlers — S1 |
+| U-02 | **FAIL** | no `:focus-visible` rule — S1 |
+| U-04 | **FAIL** | `#status` has no `aria-live` — S1 |
+| U-05 | **FAIL** | transitions with no reduced-motion block — S2 |
+| U-07 | **FAIL** | timer switching is mouse-only — S1 |
+| U-08 | **FAIL** | delete confirmation has no Escape path — S2 |
+| M-01…M-06 | PASS | — |
+| T-01 | PASS | `{ accumulatedMs, runningSince }` |
+| T-02 | PASS | epoch timestamps, must survive worker death |
+| T-03 | PASS | documented at `content.js` poll |
+
+**Outstanding:** all U requirements (deferred — UI pass not yet run), D-11, S-03.
