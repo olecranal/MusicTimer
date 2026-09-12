@@ -16,6 +16,13 @@ no need to reload it.
 
 The same steps work in Chrome at `chrome://extensions/`.
 
+**Updating after pulling new code:** if the update added a new permission (check
+`manifest.json`'s `permissions` list against what you last had), clicking the reload icon on
+the extension card is not enough - Chromium browsers can silently withhold a newly added
+permission from an unpacked extension until it's re-approved, with no visible error. If
+something that used to work stops working right after an update, **Remove** the extension
+and **Load unpacked** again rather than reloading it in place.
+
 ## What it does
 
 **1. Follow the music (default).** The timer runs while audio is playing and pauses the
