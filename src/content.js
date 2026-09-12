@@ -18,7 +18,6 @@
 
   const HEARTBEAT_MS = 4000; // resend at least this often (background treats >12s as dead)
   const POLL_MS = 1000;      // how often we inspect the page
-  const STALL_TICKS = 3;     // polls with no currentTime movement before we call it stopped
 
   const SITE = (() => {
     const h = location.hostname;
@@ -69,38 +68,11 @@
 
   /* ------------------------------------------------------- playback signal */
 
-  const progress = new WeakMap(); // media element -> { ct, stalledTicks }
+  const detector = MTPlayback.createPlaybackDetector();
 
-  function activeMediaElement() {
-    let best = null;
-    for (const el of document.querySelectorAll("video, audio")) {
-      if (el.paused || el.ended) continue;
-      if (el.readyState === 0) continue;
-      // Prefer the element furthest along - avoids silent preload/ad elements.
-      if (!best || el.currentTime > best.currentTime) best = el;
-    }
-    return best;
-  }
-
+  /** true = playing, false = definitely not, null = no media element to judge by. */
   function mediaPlaying() {
-    const el = activeMediaElement();
-    if (!el) {
-      // A media element that exists and is paused is a definitive "not playing".
-      // Only a page with no media element at all is genuinely unknown - YouTube for
-      // example leaves "playing-mode" on the player while the video is unstarted, so
-      // the button fallback must never override a real element.
-      return document.querySelector("video, audio") ? false : null;
-    }
-    const prev = progress.get(el);
-    const ct = el.currentTime;
-    if (prev && Math.abs(ct - prev.ct) < 0.01) {
-      prev.stalledTicks += 1;
-      prev.ct = ct;
-      if (prev.stalledTicks >= STALL_TICKS) return false; // paused === false but frozen
-    } else {
-      progress.set(el, { ct, stalledTicks: 0 });
-    }
-    return true;
+    return detector.detect(document.querySelectorAll("video, audio"));
   }
 
   /* ---------------------------------------------------------- site adapters */

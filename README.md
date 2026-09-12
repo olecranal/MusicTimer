@@ -66,10 +66,16 @@ own page for the best result.
 ## How playback is detected
 
 The content script watches the page's `<video>`/`<audio>` element: playing means *not
-paused* **and** `currentTime` is actually advancing, which keeps a buffering or stalled
-player from being counted. The site's own play/pause button is used only as a fallback when
-the page has no media element yet — YouTube, for example, leaves `playing-mode` on its
-player before the first play, so a real media element always wins.
+paused* **and** `currentTime` is actually advancing, which keeps a buffering or wedged
+player from being counted. Progress is judged at most once per ~900ms; calls in between
+repeat the standing verdict. That matters because the detector runs from the 1s poll *and*
+from play/pause events, so several calls can land in the same millisecond — a track change
+fires pause+play right next to a poll. Counting those as stalls reported "not playing" over
+music that was playing fine.
+
+The site's own play/pause button is used only as a fallback when the page has no media
+element yet — YouTube, for example, leaves `playing-mode` on its player before the first
+play, so a real media element always wins.
 
 Tabs report in every 4 seconds. The background worker owns the clock and stores it as
 `{ accumulatedMs, runningSince }`, so elapsed time is always derived from timestamps and
@@ -86,10 +92,12 @@ src/background.js        every timer's clock, mode logic, playlist routing, badg
 src/popup.html/css/js    the popup UI
 src/shared/logger.js     structured logging, shared by all three contexts
 src/shared/contract.js   the message types and command names they agree on
+src/shared/playback.js   "is this page making sound?", free of DOM and chrome APIs
 test/harness.js          stubbed chrome API + fake clock
 test/background.test.js  clock, modes, playlist filter, multi-timer routing
 test/migration.test.js   upgrading from older stored layouts
 test/laps.test.js        lap splitting, naming, isolation and reset
+test/playback.test.js    playback detection, including the burst-of-calls regression
 docs/BEST_PRACTICES.md   the standards this code is written against
 docs/CONFORMANCE.md      those standards as checkable requirements + an audit log
 BACKLOG.md               ideas raised but not built yet
@@ -109,7 +117,7 @@ session rather than once a second.
 ## Tests
 
 ```bash
-node test/background.test.js && node test/migration.test.js && node test/laps.test.js
+node test/background.test.js && node test/migration.test.js && node test/laps.test.js && node test/playback.test.js
 ```
 
 Runs the real `background.js` against a stubbed `chrome` API and a fake clock, covering

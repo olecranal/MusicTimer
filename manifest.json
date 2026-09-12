@@ -27,6 +27,7 @@
       "js": [
         "src/shared/logger.js",
         "src/shared/contract.js",
+        "src/shared/playback.js",
         "src/content.js"
       ],
       "run_at": "document_idle",
