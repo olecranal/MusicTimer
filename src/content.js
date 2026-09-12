@@ -13,6 +13,14 @@
 (() => {
   "use strict";
 
+  // The worker can back-fill this script into a tab that was already open when the
+  // extension loaded (see background.js's backfillExistingTabs). If that tab then also
+  // refreshes, or the worker retries a backfill, the manifest-declared and programmatic
+  // injections could both end up running here - guard against setting up two pollers and
+  // two sets of listeners on the same page.
+  if (window.__mtContentInjected) return;
+  window.__mtContentInjected = true;
+
   const log = mtLogger("content");
   mtLogger.installGlobalErrorHandlers("content");
 

@@ -5,7 +5,8 @@
   "description": "A timer that runs while your music is playing. Works with YouTube Music, Spotify Web and YouTube.",
   "permissions": [
     "storage",
-    "alarms"
+    "alarms",
+    "scripting"
   ],
   "host_permissions": [
     "https://music.youtube.com/*",

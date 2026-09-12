@@ -9,14 +9,19 @@ the music stops. Built for **YouTube Music**, and also works on **Spotify Web** 
 1. Open `edge://extensions/`
 2. Turn on **Developer mode** (bottom-left toggle)
 3. Click **Load unpacked** and pick this folder (`Documents\MusicTimer`)
-4. Pin the extension so the icon stays visible, then open a music tab
+4. Pin the extension so the icon stays visible
+
+A music tab you already had open gets picked up automatically within a second or two -
+no need to reload it.
 
 The same steps work in Chrome at `chrome://extensions/`.
 
 ## What it does
 
 **1. Follow the music (default).** The timer runs while audio is playing and pauses the
-moment you pause. Reload a music tab once after installing so the detector is injected.
+moment you pause. If you had a music tab open before installing (or before reloading the
+extension after an update), it backfills itself into that tab within a second or two - no
+manual refresh needed. See *Reaching tabs that were already open* below.
 
 **2. Only when I say.** The timer starts on its own the first time music plays, then keeps
 running through pauses, track changes and silence until you press **Stop**. After you stop,
@@ -63,6 +68,21 @@ Spotify keeps the playing context out of the DOM more often than the YouTube sit
 playlist filtering there is the weakest of the three. Capture the filter from the playlist's
 own page for the best result.
 
+## Reaching tabs that were already open
+
+Chrome only auto-injects a manifest-declared content script into tabs that load *after* the
+extension does. A tab you already had open when you installed the extension - or when you
+reloaded it from `edge://extensions` to pick up an update - never gets the script from the
+manifest alone. Not on switching to it, not on it regaining focus; only an actual navigation
+or refresh triggers it. From the outside that looks exactly like "the timer doesn't see a
+tab I already had open," and for a while it actually was that: nothing patched it.
+
+The background worker now closes that gap itself: on install, on update, and on browser
+startup, it reads the exact file list and match patterns out of its own manifest and injects
+them into every open tab that matches - reusing the declaration rather than keeping a second
+copy that could drift from it. A tab you open after that point is still handled the normal
+way, by the manifest.
+
 ## How playback is detected
 
 The content script watches the page's `<video>`/`<audio>` element: playing means *not
@@ -98,6 +118,7 @@ test/background.test.js  clock, modes, playlist filter, multi-timer routing
 test/migration.test.js   upgrading from older stored layouts
 test/laps.test.js        lap splitting, naming, isolation and reset
 test/playback.test.js    playback detection, including the burst-of-calls regression
+test/backfill.test.js    injecting into tabs that were already open at install/startup
 docs/BEST_PRACTICES.md   the standards this code is written against
 docs/CONFORMANCE.md      those standards as checkable requirements + an audit log
 BACKLOG.md               ideas raised but not built yet
@@ -117,7 +138,7 @@ session rather than once a second.
 ## Tests
 
 ```bash
-node test/background.test.js && node test/migration.test.js && node test/laps.test.js && node test/playback.test.js
+node test/background.test.js && node test/migration.test.js && node test/laps.test.js && node test/playback.test.js && node test/backfill.test.js
 ```
 
 Runs the real `background.js` against a stubbed `chrome` API and a fake clock, covering

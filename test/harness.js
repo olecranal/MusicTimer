@@ -7,12 +7,13 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const SRC = path.join(ROOT, "src", "background.js");
 
-function createWorker({ seedLocal = {}, now = 1700000000000 } = {}) {
+function createWorker({ seedLocal = {}, now = 1700000000000, manifest = {}, openTabs = [] } = {}) {
   let NOW = now;
-  const listeners = { message: [], removed: [], alarm: [], startup: [] };
+  const listeners = { message: [], removed: [], alarm: [], startup: [], installed: [] };
   const local = JSON.parse(JSON.stringify(seedLocal));
   const session = {};
   const badge = {};
+  const injections = []; // every chrome.scripting.executeScript call, for backfill tests
 
   const area = (store) => ({
     async get(key) {
@@ -32,9 +33,23 @@ function createWorker({ seedLocal = {}, now = 1700000000000 } = {}) {
     runtime: {
       onMessage: { addListener: (f) => listeners.message.push(f) },
       onStartup: { addListener: (f) => listeners.startup.push(f) },
-      onInstalled: { addListener: () => {} },
+      onInstalled: { addListener: (f) => listeners.installed.push(f) },
+      getManifest: () => manifest,
     },
-    tabs: { onRemoved: { addListener: (f) => listeners.removed.push(f) } },
+    tabs: {
+      onRemoved: { addListener: (f) => listeners.removed.push(f) },
+      // Real tabs.query filters by matching against each tab's URL; a plain "does this
+      // pattern list include this tab" is close enough for what the tests need.
+      query: async ({ url: patterns } = {}) =>
+        openTabs.filter(
+          (tab) => !patterns || patterns.some((p) => new RegExp("^" + p.replace(/\*/g, ".*") + "$").test(tab.url))
+        ),
+    },
+    scripting: {
+      executeScript: async (call) => {
+        injections.push(call);
+      },
+    },
     alarms: { create: () => {}, onAlarm: { addListener: (f) => listeners.alarm.push(f) } },
   };
 
@@ -67,6 +82,7 @@ function createWorker({ seedLocal = {}, now = 1700000000000 } = {}) {
   return {
     badge,
     listeners,
+    injections,
     msg,
     report: (tabId, state) =>
       msg(
@@ -78,6 +94,7 @@ function createWorker({ seedLocal = {}, now = 1700000000000 } = {}) {
     advance: (ms) => { NOW += ms; },
     closeTab: (id) => listeners.removed[0](id),
     restart: () => Promise.all(listeners.startup.map((f) => f())),
+    install: () => Promise.all(listeners.installed.map((f) => f())),
   };
 }
 

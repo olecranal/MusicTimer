@@ -525,6 +525,45 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === TICK_ALARM) evaluate();
 });
 
+/**
+ * Chrome only auto-injects a manifest-declared content script into tabs that load *after*
+ * the extension does. A tab the user already had open when they installed or reloaded the
+ * extension never gets it - not on focus, not on becoming active, only on an actual
+ * navigation or refresh. That silent gap is exactly what "the timer doesn't see a tab I
+ * already had open" looks like from the outside, so back-fill it ourselves.
+ *
+ * Reads the file list and match patterns from the manifest itself rather than repeating
+ * them here, so the two can never drift apart the way the message-contract strings used to
+ * (see the note at the top of shared/contract.js for that history).
+ */
+async function backfillExistingTabs() {
+  const entry = chrome.runtime.getManifest().content_scripts?.[0];
+  if (!entry) {
+    log.warn("inject:no-manifest-entry", {});
+    return;
+  }
+
+  let tabs;
+  try {
+    tabs = await chrome.tabs.query({ url: entry.matches });
+  } catch (error) {
+    log.warn("inject:tabs-query-failed", { error: String(error) });
+    return;
+  }
+
+  for (const tab of tabs) {
+    if (tab.id == null) continue;
+    try {
+      await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: entry.js });
+      log.info("inject:backfilled", { tabId: tab.id, url: tab.url });
+    } catch (error) {
+      // Expected for a tab that navigated away mid-loop, or one Chrome refuses injection
+      // into for reasons outside our control. Not worth alarming over per tab.
+      log.warnOnce(`inject:${tab.id}`, "inject:backfill-failed", { tabId: tab.id, error: String(error) });
+    }
+  }
+}
+
 chrome.runtime.onStartup.addListener(async () => {
   // A browser restart means nothing is playing yet - bank any in-flight time.
   log.info("worker:startup", {});
@@ -537,9 +576,13 @@ chrome.runtime.onStartup.addListener(async () => {
   await putState(state);
   await putSources({});
   await updateBadge(state.timers[state.activeId]);
+  await backfillExistingTabs();
 });
 
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
+  // This is the common case: the user reloads the extension from edge://extensions with a
+  // music tab already open, then wonders why nothing is happening in it.
   log.info("worker:installed", {});
-  evaluate();
+  await backfillExistingTabs();
+  await evaluate();
 });
