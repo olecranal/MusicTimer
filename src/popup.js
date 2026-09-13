@@ -21,6 +21,8 @@ const elements = {
   today: document.getElementById("today"),
   clock: document.getElementById("clock"),
   status: document.getElementById("status"),
+  settingsToggle: /** @type {HTMLButtonElement} */ (document.getElementById("settingsToggle")),
+  settingsPanel: document.getElementById("settingsPanel"),
   lap: document.getElementById("lap"),
   toggle: document.getElementById("toggle"),
   reset: document.getElementById("reset"),
@@ -47,6 +49,8 @@ let editingId = null;
 /** @type {string | null} lap whose name is being edited inline */
 let editingLapId = null;
 let isConfirmingDelete = false;
+/** Purely local UI state - the worker has no notion of whether this panel is open. */
+let settingsOpen = false;
 
 /** True while an inline name field is open; a background sync would destroy it. */
 const isEditing = () => Boolean(editingId || editingLapId);
@@ -388,6 +392,18 @@ async function sync(message = { type: MT.MESSAGE.GET }) {
 }
 
 /* ------------------------------------------------------------------- events */
+
+/** Mode and playlist binding live behind the gear - settings you set once, not every visit. */
+function applySettingsOpen() {
+  elements.settingsPanel.hidden = !settingsOpen;
+  elements.settingsToggle.setAttribute("aria-expanded", String(settingsOpen));
+}
+
+elements.settingsToggle.addEventListener("click", () => {
+  settingsOpen = !settingsOpen;
+  applySettingsOpen();
+});
+applySettingsOpen();
 
 elements.toggle.addEventListener("click", () =>
   command(snapshot?.running ? MT.ACTION.STOP : MT.ACTION.START)

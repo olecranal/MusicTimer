@@ -33,16 +33,17 @@ manual refresh needed. See *Reaching tabs that were already open* below.
 **2. Only when I say.** The timer starts on its own the first time music plays, then keeps
 running through pauses, track changes and silence until you press **Stop**. After you stop,
 it will not restart while the same music is still going — it re-arms only once playback has
-actually stopped and started again.
+actually stopped and started again. Switch modes under the **⚙ Settings** panel.
 
 **3. Several timers.** Keep `Work` and `Gaming` apart so each tracks its own total.
 Every timer carries its own clock, mode and playlist binding. Only the active one counts —
 pick it in the **Timers** list, or let it pick itself (below). Use **+ New**, **Rename** and
 **Delete** to manage the list; the last timer cannot be deleted.
 
-**4. Count only one playlist.** Play the playlist you care about, open the popup and press
-**Use current**. From then on only that playlist moves the clock; anything else is ignored
-(the popup says so: *"Music is playing, but not from …"*). Press **Any music** to clear it.
+**4. Count only one playlist.** In the **⚙ Settings** panel, play the playlist you care about
+and press **Use current**. From then on only that playlist moves the clock; anything else is
+ignored (the popup says so: *"Music is playing, but not from …"*). Press **Any music** to
+clear it.
 
 **5. Laps.** **Lap** splits the active timer the way a stopwatch does: it closes the
 stretch you were in and opens the next one, leaving the running total alone. Each lap is

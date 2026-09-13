@@ -10,6 +10,15 @@
       <span class="dot" id="dot"></span>
       <h1 id="activeName">Music Timer</h1>
       <span class="today" id="today">today 0m</span>
+      <button
+        id="settingsToggle"
+        class="icon-button"
+        type="button"
+        aria-expanded="false"
+        aria-controls="settingsPanel"
+        aria-label="Settings"
+        title="Settings"
+      >⚙</button>
     </header>
 
     <div class="clock" id="clock">0:00:00</div>
@@ -37,27 +46,29 @@
       </div>
     </section>
 
-    <section>
-      <h2>When the timer stops</h2>
-      <div class="mode-switch" id="mode">
-        <button data-mode="auto" class="on">Follow the music</button>
-        <button data-mode="sticky">Only when I say</button>
-      </div>
-      <p class="hint" id="modeHint">Runs while music plays, pauses the moment it stops.</p>
-    </section>
+    <div id="settingsPanel" hidden>
+      <section>
+        <h2>When the timer stops</h2>
+        <div class="mode-switch" id="mode">
+          <button data-mode="auto" class="on">Follow the music</button>
+          <button data-mode="sticky">Only when I say</button>
+        </div>
+        <p class="hint" id="modeHint">Runs while music plays, pauses the moment it stops.</p>
+      </section>
 
-    <section>
-      <h2>Count only one playlist</h2>
-      <div class="filter" id="filter">
-        <div class="filter__name" id="filterName">Any music counts</div>
-        <div class="filter__source" id="filterSub"></div>
-      </div>
-      <div class="row">
-        <button id="useCurrent">Use current</button>
-        <button id="clearFilter" class="ghost">Any music</button>
-      </div>
-      <p class="hint">A timer bound to a playlist takes over automatically when that playlist plays.</p>
-    </section>
+      <section>
+        <h2>Count only one playlist</h2>
+        <div class="filter" id="filter">
+          <div class="filter__name" id="filterName">Any music counts</div>
+          <div class="filter__source" id="filterSub"></div>
+        </div>
+        <div class="row">
+          <button id="useCurrent">Use current</button>
+          <button id="clearFilter" class="ghost">Any music</button>
+        </div>
+        <p class="hint">A timer bound to a playlist takes over automatically when that playlist plays.</p>
+      </section>
+    </div>
 
     <footer id="tabs"></footer>
 

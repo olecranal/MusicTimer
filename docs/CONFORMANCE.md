@@ -445,7 +445,7 @@ Run after the readability/scalability/debugging iteration.
 | D-11 | **FAIL** | playback detection extracted to `shared/playback.js` and covered by `test/playback.test.js`; the per-site adapters (track/context selectors) still have no fixture tests — S1 |
 | D-12 | PASS | harness stubs `chrome` only |
 | U-01 | **FAIL** | timer rows are `<div>` with click handlers — S1 |
-| U-02 | **FAIL** | no `:focus-visible` rule — S1 |
+| U-02 | PASS | `button:focus-visible` + `.lap-list__row--closed:focus-visible`; only covers elements that can receive focus at all, so it does not reach the timer rows blocked by U-01/U-07 |
 | U-04 | **FAIL** | `#status` has no `aria-live` — S1 |
 | U-05 | **FAIL** | transitions with no reduced-motion block — S2 |
 | U-07 | **FAIL** | timer switching is mouse-only — S1 |
@@ -455,7 +455,7 @@ Run after the readability/scalability/debugging iteration.
 | T-02 | PASS | epoch timestamps, must survive worker death |
 | T-03 | PASS | documented at `content.js` poll |
 
-**Outstanding:** all U requirements (deferred — UI pass not yet run), D-11, S-03.
+**Outstanding:** U-01, U-04, U-05, U-07, U-08 (deferred — UI pass not yet run), D-11, S-03.
 
 ### Toolchain, as of this audit
 
