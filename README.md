@@ -84,6 +84,7 @@ test/migration.test.js   upgrading from the single-timer v1 layout
 docs/BEST_PRACTICES.md   the standards this code is written against
 docs/CONFORMANCE.md      those standards as checkable requirements + an audit log
 BACKLOG.md               ideas raised but not built yet
+LICENSE                  MIT
 ```
 
 ## Logs
@@ -131,3 +132,7 @@ the old single-timer layout keeps the time you had banked.
   was in progress at that moment - at most a few minutes.
 - Site selectors (track titles, playlist names) can drift when these sites redesign; the
   timer itself keeps working because it relies on the media element, not on selectors.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
