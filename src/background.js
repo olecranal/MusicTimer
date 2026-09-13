@@ -1,3 +1,4 @@
+// @ts-check
 /* Music Timer - background service worker.
  *
  * Owns every timer's clock. MV3 workers get killed at will, so no wall-clock ticking
@@ -22,6 +23,10 @@ const STALE_MS = 12000; // a tab that has not reported in this long is assumed g
 const TICK_ALARM = "mt.tick";
 const TICK_PERIOD_MINUTES = 0.5;
 
+/**
+ * @param {string} name
+ * @returns {Timer}
+ */
 const newTimer = (name) => ({
   id: "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
   name,
@@ -45,7 +50,11 @@ const lapDefaultName = (timer) => `${timer.name} - lap ${timer.laps.length + 1}`
 
 /* ------------------------------------------------------------------ storage */
 
-/** Applies defaults and migrations so the rest of the worker can assume a valid shape. */
+/**
+ * Applies defaults and migrations so the rest of the worker can assume a valid shape.
+ * @param {any} raw whatever was in storage - possibly a v1 shape, possibly nothing
+ * @returns {MusicTimerState}
+ */
 function normalize(raw) {
   const state = raw && raw.timers ? { ...raw } : { version: 2, activeId: null, order: [], timers: {} };
 
@@ -88,20 +97,24 @@ function normalize(raw) {
   return state;
 }
 
+/** @returns {Promise<MusicTimerState>} */
 async function getState() {
   const got = await chrome.storage.local.get(STATE_KEY);
   return normalize(got[STATE_KEY]);
 }
 
+/** @param {MusicTimerState} state */
 function putState(state) {
   return chrome.storage.local.set({ [STATE_KEY]: state });
 }
 
+/** @returns {Promise<Record<string, PlaybackSource>>} */
 async function getSources() {
   const got = await chrome.storage.session.get(SOURCES_KEY);
   return got[SOURCES_KEY] || {};
 }
 
+/** @param {Record<string, PlaybackSource>} sources */
 function putSources(sources) {
   return chrome.storage.session.set({ [SOURCES_KEY]: sources });
 }
@@ -110,15 +123,18 @@ function putSources(sources) {
 
 const today = () => new Date().toISOString().slice(0, 10);
 
+/** @param {Timer} t @returns {number} */
 function elapsedMs(t) {
   return t.accumulatedMs + (t.running && t.runningSince ? Date.now() - t.runningSince : 0);
 }
 
+/** @param {Timer} t @returns {number} */
 function todayMs(t) {
   const live = t.running && t.runningSince ? Date.now() - t.runningSince : 0;
   return (t.daily[today()] || 0) + live;
 }
 
+/** @param {Timer} t */
 function startClock(t) {
   if (t.running) return; // already counting - not a transition, nothing to report
   t.running = true;
@@ -126,7 +142,11 @@ function startClock(t) {
   log.info("clock:start", { timerId: t.id, name: t.name, accumulatedMs: t.accumulatedMs });
 }
 
-/** Stop the clock, optionally backdating to `at` (used when a tab dies silently). */
+/**
+ * Stop the clock, optionally backdating to `at` (used when a tab dies silently).
+ * @param {Timer} t
+ * @param {number} [at] epoch ms to bank up to; defaults to now
+ */
 function stopClock(t, at = Date.now()) {
   if (!t.running) return; // already stopped - not a transition
   const delta = Math.max(0, at - t.runningSince);
@@ -139,6 +159,11 @@ function stopClock(t, at = Date.now()) {
 
 /* ------------------------------------------------------------------ matching */
 
+/**
+ * @param {PlaylistContext | null} filter
+ * @param {PlaylistContext | null} context
+ * @returns {boolean}
+ */
 function matchesFilter(filter, context) {
   if (!filter) return true; // no filter: any music counts
   if (!context) return false;
@@ -149,7 +174,12 @@ function matchesFilter(filter, context) {
   return Boolean(a) && a === b;
 }
 
-/** The first playing source that a timer's filter accepts, if any. */
+/**
+ * The first playing source that a timer's filter accepts, if any.
+ * @param {Timer} timer
+ * @param {PlaybackSource[]} playing
+ * @returns {PlaybackSource | null}
+ */
 function matchFor(timer, playing) {
   return playing.find((s) => matchesFilter(timer.filter, s.context)) || null;
 }
@@ -162,6 +192,9 @@ function matchFor(timer, playing) {
  * not re-decide - otherwise manually switching away from an auto-claimed timer would be
  * undone on the next tick. It clears the moment that playlist stops, so starting it again
  * later claims again.
+ *
+ * @param {MusicTimerState} state mutated in place
+ * @param {PlaybackSource[]} playing
  */
 function claimActive(state, playing) {
   const playingContextIds = new Set(playing.map((s) => s.context?.id).filter(Boolean));
@@ -194,7 +227,10 @@ function claimActive(state, playing) {
 
 /* --------------------------------------------------------------- evaluation */
 
-/** Recompute which timer is active and whether its clock should run. */
+/**
+ * Recompute which timer is active and whether its clock should run.
+ * @returns {Promise<MusicTimerState>}
+ */
 async function evaluate() {
   const state = await getState();
   const sources = await getSources();
@@ -265,11 +301,13 @@ async function evaluate() {
 
 /* ------------------------------------------------------------------- badge */
 
+/** @param {number} ms @returns {string} */
 function formatBadge(ms) {
   const mins = Math.floor(ms / 60000);
   return mins < 60 ? String(mins) : Math.floor(mins / 60) + "h";
 }
 
+/** @param {Timer} timer */
 async function updateBadge(timer) {
   const ms = elapsedMs(timer);
   await chrome.action.setBadgeText({ text: ms >= 60000 ? formatBadge(ms) : timer.running ? "▶" : "" });
@@ -278,7 +316,12 @@ async function updateBadge(timer) {
 
 /* ----------------------------------------------------------------- commands */
 
-/** Switch the active timer, banking whatever the outgoing one had counted. */
+/**
+ * Switch the active timer, banking whatever the outgoing one had counted.
+ * @param {MusicTimerState} state mutated in place
+ * @param {string} id
+ * @param {PlaybackSource[]} playing
+ */
 function setActive(state, id, playing) {
   if (!state.timers[id] || id === state.activeId) return;
   log.info("active:manual-select", {
@@ -295,6 +338,10 @@ function setActive(state, id, playing) {
   state.lastClaim = claimant ? { timerId: id, contextId: matchFor(claimant, playing).context?.id || null } : null;
 }
 
+/**
+ * @param {CommandMessage} msg
+ * @returns {Promise<MusicTimerState>}
+ */
 async function command(msg) {
   const state = await getState();
   const sources = await getSources();
@@ -425,7 +472,10 @@ async function command(msg) {
   return evaluate();
 }
 
-/** Best context to offer as a playlist binding: prefer what is playing right now. */
+/**
+ * Best context to offer as a playlist binding: prefer what is playing right now.
+ * @returns {Promise<PlaylistContext | null>}
+ */
 async function candidateContext() {
   const sources = await getSources();
   const list = Object.values(sources)
@@ -435,7 +485,10 @@ async function candidateContext() {
   return src ? { ...src.context, site: src.site, siteLabel: src.siteLabel } : null;
 }
 
-/** Everything the popup needs, in one round trip. */
+/**
+ * Everything the popup needs, in one round trip.
+ * @returns {Promise<PopupSnapshot>}
+ */
 async function snapshotForPopup() {
   const state = await evaluate();
   const sources = await getSources();

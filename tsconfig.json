@@ -1,0 +1,35 @@
+{
+  // Type-checks plain JavaScript via JSDoc. There is no build step and nothing is emitted -
+  // this exists so the editor and `npx -y -p typescript tsc --noEmit` can catch typos,
+  // wrong arity, and misspelled properties before the browser does.
+  //
+  // Deliberately not `strict`. strictNullChecks would bury the real findings under
+  // thousands of "possibly null" notes on DOM lookups that are guaranteed by popup.html.
+  // Tighten it once the current level runs clean in CI. See docs/CONFORMANCE.md R-13.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
+    "moduleDetection": "force",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+
+    "noUnusedLocals": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitReturns": false,
+    "allowUnreachableCode": false,
+
+    "skipLibCheck": true
+  },
+  // types/ hand-declares the platform surface this extension actually uses, so no
+  // @types/chrome dependency is needed. test/ is excluded: it is CommonJS and would need
+  // @types/node to check.
+  "include": ["src/**/*.js", "types/**/*.d.ts"]
+}

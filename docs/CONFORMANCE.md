@@ -13,6 +13,13 @@ Give an LLM this prompt:
 > reason given there has stopped being true. Output a table, then a short list of only the
 > FAILs, ranked by the severity column.
 
+Run the automated layer first — it settles several requirements in seconds and tells you
+whether the tree is even in a checkable state:
+
+```bash
+npx -y -p typescript@5 tsc --noEmit -p tsconfig.json && node test/background.test.js && node test/migration.test.js
+```
+
 Rules for the auditor:
 
 - **Evidence or it didn't happen.** Every verdict cites a file and line, or the exact
@@ -102,6 +109,31 @@ property.
 **Check:** `grep -nE "#[0-9a-fA-F]{3,8}|rgba?\(" src/*.css`
 **Fails if:** a hex or rgb() value appears outside the `:root` block.
 **Exempt:** documented one-off states listed in Accepted debt.
+
+### R-13 — Type check is clean · S1
+**Requirement:** `tsc --noEmit` reports zero errors against `tsconfig.json`.
+**Check:** `npx -y -p typescript@5 tsc --noEmit -p tsconfig.json; echo $?`
+**Fails if:** exit code is not 0.
+**Note — the strictness ratchet.** The current config has `strict: false` and
+`strictNullChecks: false`, because turning them on today buries real findings under
+thousands of "possibly null" notes on DOM lookups that `popup.html` guarantees. That is a
+deliberate floor, not a ceiling: raise one flag at a time, fix the fallout, and record the
+new floor here. Never lower it to make an error go away.
+
+### R-14 — Every shipped file opts into checking · S2
+**Requirement:** Every `.js` file under `src/` begins with `// @ts-check`.
+**Check:** `for f in src/**/*.js; do head -1 "$f" | grep -q "@ts-check" || echo "$f"; done`
+**Fails if:** any file is listed.
+**Why it is separate from R-13:** a file with no `@ts-check` passes R-13 trivially. Opting
+out is how a type check quietly stops covering anything.
+
+### R-15 — The checker is known to work · S2
+**Requirement:** The type check must be demonstrably capable of failing.
+**Check:** Create `src/__probe.js` containing a misspelled property on a declared type, a
+bad `MT.ACTION.*` name, and a call with the wrong arity. Run R-13's command. Delete the probe.
+**Fails if:** the probe does not produce errors.
+**Why:** a green check that cannot go red is worse than no check — it manufactures
+confidence. Re-run this whenever `tsconfig.json` or `types/` changes.
 
 ---
 
@@ -388,6 +420,9 @@ Run after the readability/scalability/debugging iteration.
 | R-10 | PASS | kebab-case + BEM in `popup.css` |
 | R-11 | PASS | `.live` split into `.dot--live` / `.timer-list__live` |
 | R-12 | debt | see table above |
+| R-13 | PASS | `tsc --noEmit` exit 0 |
+| R-14 | PASS | all 5 files in `src/` carry `// @ts-check` |
+| R-15 | PASS | probe caught 5/5 deliberate bugs (typo, bad action, bad chrome API, bad field, wrong arity) |
 | S-01 | PASS | `chrome.storage` only in `background.js` accessors |
 | S-02 | PASS | elapsed derived, never stored twice |
 | S-03 | FAIL | `popup.js` mixes transport, view state, and DOM — S3, deferred |
@@ -407,7 +442,7 @@ Run after the readability/scalability/debugging iteration.
 | D-08 | PASS | `warnOnce` on all poll-reachable paths |
 | D-09 | PASS | `mtLogger.setLevel` / `MT_LOG_LEVEL` |
 | D-10 | PASS | harness `Date.now` proxy + `advance()` |
-| D-11 | **FAIL** | `src/content.js` adapters still have no fixture tests — S1 |
+| D-11 | **FAIL** | playback detection extracted to `shared/playback.js` and covered by `test/playback.test.js`; the per-site adapters (track/context selectors) still have no fixture tests — S1 |
 | D-12 | PASS | harness stubs `chrome` only |
 | U-01 | **FAIL** | timer rows are `<div>` with click handlers — S1 |
 | U-02 | **FAIL** | no `:focus-visible` rule — S1 |
@@ -421,3 +456,17 @@ Run after the readability/scalability/debugging iteration.
 | T-03 | PASS | documented at `content.js` poll |
 
 **Outstanding:** all U requirements (deferred — UI pass not yet run), D-11, S-03.
+
+### Toolchain, as of this audit
+
+| Layer | Covers | Runs |
+|---|---|---|
+| `tsc --noEmit` + `types/` | R-13, R-14, R-15; mechanically prevents R-06 regressions | editor, on every keystroke; CLI on demand |
+| `node test/*.js` | T-01, T-02, S-06, D-10, D-12 | CLI, ~1s |
+| This document, read by an LLM | everything requiring judgment | occasionally |
+
+`types/` is hand-written rather than `@types/chrome`, so the repo keeps zero dependencies
+and no `node_modules`. The trade is that a chrome API we have not declared is an error
+rather than a silent any — which is the intended behaviour, not a defect: adding to
+`types/chrome.d.ts` should be a conscious act. Not yet automated: ESLint and Prettier,
+which would need a `package.json` this project deliberately does not have.

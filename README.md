@@ -120,6 +120,8 @@ src/popup.html/css/js    the popup UI
 src/shared/logger.js     structured logging, shared by all three contexts
 src/shared/contract.js   the message types and command names they agree on
 src/shared/playback.js   "is this page making sound?", free of DOM and chrome APIs
+types/*.d.ts             hand-declared chrome API + the shapes that cross a boundary
+tsconfig.json            type-check config (checkJs, no build, no dependencies)
 test/harness.js          stubbed chrome API + fake clock
 test/background.test.js  clock, modes, playlist filter, multi-timer routing
 test/migration.test.js   upgrading from older stored layouts
@@ -129,6 +131,7 @@ test/backfill.test.js    injecting into tabs that were already open at install/s
 docs/BEST_PRACTICES.md   the standards this code is written against
 docs/CONFORMANCE.md      those standards as checkable requirements + an audit log
 BACKLOG.md               ideas raised but not built yet
+LICENSE                  MIT
 ```
 
 ## Logs
@@ -141,6 +144,20 @@ Verbosity is one switch — set `MT_LOG_LEVEL` before the logger loads, or call
 `mtLogger.setLevel("debug" | "info" | "warn" | "error" | "silent")` from any console.
 Conditions a poll can reach (a drifted selector, a dead message port) report once per
 session rather than once a second.
+
+## Checks
+
+Type check — catches typos, wrong arity and misspelled properties before the browser does:
+
+```bash
+npx -y -p typescript@5 tsc --noEmit -p tsconfig.json
+```
+
+There is no build step and nothing is emitted. `tsconfig.json` turns on `checkJs`, every
+file in `src/` opts in with `// @ts-check`, and the types come from JSDoc plus `types/`,
+which hand-declares the slice of the extension platform this project uses. That keeps the
+repo at zero dependencies — there is no `package.json` and no `node_modules`. VS Code reads
+the same config, so the errors appear as you type.
 
 ## Tests
 
@@ -162,3 +179,7 @@ the old single-timer layout keeps the time you had banked.
   was in progress at that moment - at most a few minutes.
 - Site selectors (track titles, playlist names) can drift when these sites redesign; the
   timer itself keeps working because it relies on the media element, not on selectors.
+
+## License
+
+MIT — see [LICENSE](LICENSE).

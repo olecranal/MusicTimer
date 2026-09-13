@@ -1,3 +1,4 @@
+// @ts-check
 /* Music Timer - content script.
  * Detects playback state + "what is playing from" on YouTube Music, Spotify and YouTube,
  * and reports it to the background service worker.
@@ -78,9 +79,12 @@
 
   const detector = MTPlayback.createPlaybackDetector();
 
-  /** true = playing, false = definitely not, null = no media element to judge by. */
+  /** @returns {boolean | null} true = playing, false = definitely not, null = no media element */
   function mediaPlaying() {
-    return detector.detect(document.querySelectorAll("video, audio"));
+    const media = /** @type {NodeListOf<HTMLMediaElement>} */ (
+      document.querySelectorAll("video, audio")
+    );
+    return detector.detect(media);
   }
 
   /* ---------------------------------------------------------- site adapters */
@@ -241,6 +245,7 @@
   let lastKey = "";
   let dead = false;
 
+  /** @returns {PlaybackReport} */
   function snapshot() {
     let playing = mediaPlaying();
     if (playing === null) {
@@ -279,6 +284,7 @@
     return { site: SITE, siteLabel: SITE_LABEL, playing, track, context, url: location.href };
   }
 
+  /** @param {PlaybackReport} state */
   function send(state) {
     try {
       chrome.runtime.sendMessage({ type: MT.MESSAGE.STATE, state }, () => {
@@ -293,6 +299,7 @@
     }
   }
 
+  /** @param {boolean} force send even if nothing changed since the last report */
   function report(force) {
     if (dead) return;
     const state = snapshot();

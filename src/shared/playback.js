@@ -1,3 +1,4 @@
+// @ts-check
 /* Music Timer - "is this page actually playing audio?"
  *
  * Pulled out of content.js so it can be tested without a browser: it touches only the
@@ -24,8 +25,11 @@
   /**
    * The element that is actually producing sound, or null.
    * Furthest-along wins, which skips the silent preload/ad elements these sites keep around.
+   * @param {HTMLMediaElement[]} elements
+   * @returns {HTMLMediaElement | null}
    */
   function activeMediaElement(elements) {
+    /** @type {HTMLMediaElement | null} */
     let best = null;
     for (const element of elements) {
       if (element.paused || element.ended) continue;
@@ -37,12 +41,16 @@
 
   /**
    * @param {{ now?: () => number }} [options] - `now` is injectable so tests can drive a clock.
-   * @returns {{ detect: (elements: Iterable<object>) => boolean | null }}
-   *   true = playing, false = definitely not, null = no media element to judge by.
+   * @returns {MtPlaybackDetector}
    */
   function createPlaybackDetector({ now = () => Date.now() } = {}) {
-    const observations = new WeakMap(); // element -> { currentTime, at, strikes }
+    /** @type {WeakMap<HTMLMediaElement, { currentTime: number, at: number, strikes: number }>} */
+    const observations = new WeakMap();
 
+    /**
+     * @param {Iterable<HTMLMediaElement>} elements
+     * @returns {boolean | null}
+     */
     function detect(elements) {
       const list = Array.from(elements);
       const element = activeMediaElement(list);
