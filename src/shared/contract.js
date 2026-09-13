@@ -1,3 +1,4 @@
+// @ts-check
 /* Music Timer - the message contract between content script, popup and worker.
  *
  * These strings crossed three files as raw literals, which meant a typo in a command name

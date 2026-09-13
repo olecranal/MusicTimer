@@ -76,6 +76,8 @@ src/background.js        every timer's clock, mode logic, playlist routing, badg
 src/popup.html/css/js    the popup UI
 src/shared/logger.js     structured logging, shared by all three contexts
 src/shared/contract.js   the message types and command names they agree on
+types/*.d.ts             hand-declared chrome API + the shapes that cross a boundary
+tsconfig.json            type-check config (checkJs, no build, no dependencies)
 test/harness.js          stubbed chrome API + fake clock
 test/background.test.js  clock, modes, playlist filter, multi-timer routing
 test/migration.test.js   upgrading from the single-timer v1 layout
@@ -94,6 +96,20 @@ Verbosity is one switch — set `MT_LOG_LEVEL` before the logger loads, or call
 `mtLogger.setLevel("debug" | "info" | "warn" | "error" | "silent")` from any console.
 Conditions a poll can reach (a drifted selector, a dead message port) report once per
 session rather than once a second.
+
+## Checks
+
+Type check — catches typos, wrong arity and misspelled properties before the browser does:
+
+```bash
+npx -y -p typescript@5 tsc --noEmit -p tsconfig.json
+```
+
+There is no build step and nothing is emitted. `tsconfig.json` turns on `checkJs`, every
+file in `src/` opts in with `// @ts-check`, and the types come from JSDoc plus `types/`,
+which hand-declares the slice of the extension platform this project uses. That keeps the
+repo at zero dependencies — there is no `package.json` and no `node_modules`. VS Code reads
+the same config, so the errors appear as you type.
 
 ## Tests
 

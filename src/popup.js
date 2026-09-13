@@ -1,3 +1,4 @@
+// @ts-check
 /* Music Timer - popup UI.
  *
  * Owns no truth of its own: every action round-trips to the worker, which answers with a
@@ -25,7 +26,7 @@ const elements = {
   timers: document.getElementById("timers"),
   addTimer: document.getElementById("addTimer"),
   renameTimer: document.getElementById("renameTimer"),
-  deleteTimer: document.getElementById("deleteTimer"),
+  deleteTimer: /** @type {HTMLButtonElement} */ (document.getElementById("deleteTimer")),
   mode: document.getElementById("mode"),
   modeHint: document.getElementById("modeHint"),
   filterName: document.getElementById("filterName"),
@@ -35,14 +36,20 @@ const elements = {
   tabs: document.getElementById("tabs"),
 };
 
+/** @type {PopupSnapshot | null} */
 let snapshot = null;
 let lastSyncAt = 0;
-let editingId = null; // timer whose name is being edited inline
+/** @type {string | null} timer whose name is being edited inline */
+let editingId = null;
 let isConfirmingDelete = false;
 
 /* ---------------------------------------------------------------- formatting */
 
-/** Elapsed time as H:MM:SS, for the big readout and the per-timer rows. */
+/**
+ * Elapsed time as H:MM:SS, for the big readout and the per-timer rows.
+ * @param {number} ms
+ * @returns {string}
+ */
 function formatClock(ms) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
   const hours = Math.floor(totalSeconds / 3600);
@@ -51,7 +58,11 @@ function formatClock(ms) {
   return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 }
 
-/** Rounded "42m" / "2h 05m", for the day total where seconds are noise. */
+/**
+ * Rounded "42m" / "2h 05m", for the day total where seconds are noise.
+ * @param {number} ms
+ * @returns {string}
+ */
 function formatCompact(ms) {
   const minutes = Math.round(ms / 60000);
   return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
@@ -59,16 +70,25 @@ function formatCompact(ms) {
 
 /* ----------------------------------------------------------------- transport */
 
+/**
+ * @param {{ type: string, [key: string]: any }} message
+ * @returns {Promise<PopupSnapshot | undefined>}
+ */
 function send(message) {
   return new Promise((resolve) => chrome.runtime.sendMessage(message, resolve));
 }
 
+/**
+ * @param {string} action one of MT.ACTION.*
+ * @param {Record<string, any>} [extra]
+ */
 function command(action, extra = {}) {
   return sync({ type: MT.MESSAGE.COMMAND, action, ...extra });
 }
 
 /* -------------------------------------------------------------------- render */
 
+/** @returns {string} */
 function statusLine() {
   if (!snapshot) return "…";
   const active = snapshot.lastActive;
@@ -86,6 +106,7 @@ function statusLine() {
   return "Waiting for music…";
 }
 
+/** @param {number} liveMs interpolated ms since the last sync */
 function renderTimers(liveMs) {
   const box = elements.timers;
   // The local tick must not rebuild a name field the user is typing into.
@@ -137,6 +158,10 @@ function renderTimers(liveMs) {
   }
 }
 
+/**
+ * @param {TimerSummary} timer
+ * @returns {HTMLInputElement}
+ */
 function buildNameInput(timer) {
   const input = document.createElement("input");
   input.className = "timer-list__input";
@@ -221,6 +246,10 @@ function render() {
   renderTabs();
 }
 
+/**
+ * Round-trip to the worker and repaint from whatever it says.
+ * @param {{ type: string, [key: string]: any }} [message]
+ */
 async function sync(message = { type: MT.MESSAGE.GET }) {
   const next = await send(message);
   if (!next) {
@@ -265,7 +294,7 @@ elements.deleteTimer.addEventListener("click", () => {
 });
 
 elements.mode.addEventListener("click", (event) => {
-  const mode = event.target.dataset?.mode;
+  const mode = /** @type {HTMLElement} */ (event.target).dataset?.mode;
   if (mode) command(MT.ACTION.SET_MODE, { mode });
 });
 

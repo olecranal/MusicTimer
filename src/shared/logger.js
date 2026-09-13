@@ -1,3 +1,4 @@
+// @ts-check
 /* Music Timer - structured logger, shared by all three execution contexts.
  *
  * A classic script on purpose: the service worker pulls it in with importScripts(), the

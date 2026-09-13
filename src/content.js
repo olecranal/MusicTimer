@@ -1,3 +1,4 @@
+// @ts-check
 /* Music Timer - content script.
  * Detects playback state + "what is playing from" on YouTube Music, Spotify and YouTube,
  * and reports it to the background service worker.
@@ -71,9 +72,14 @@
 
   const progress = new WeakMap(); // media element -> { ct, stalledTicks }
 
+  /** @returns {HTMLMediaElement | null} the playing element furthest along, if any */
   function activeMediaElement() {
+    /** @type {HTMLMediaElement | null} */
     let best = null;
-    for (const el of document.querySelectorAll("video, audio")) {
+    const media = /** @type {NodeListOf<HTMLMediaElement>} */ (
+      document.querySelectorAll("video, audio")
+    );
+    for (const el of media) {
       if (el.paused || el.ended) continue;
       if (el.readyState === 0) continue;
       // Prefer the element furthest along - avoids silent preload/ad elements.
@@ -82,6 +88,7 @@
     return best;
   }
 
+  /** @returns {boolean | null} null means "no media element, cannot tell" */
   function mediaPlaying() {
     const el = activeMediaElement();
     if (!el) {
@@ -261,6 +268,7 @@
   let lastKey = "";
   let dead = false;
 
+  /** @returns {PlaybackReport} */
   function snapshot() {
     let playing = mediaPlaying();
     if (playing === null) {
@@ -299,6 +307,7 @@
     return { site: SITE, siteLabel: SITE_LABEL, playing, track, context, url: location.href };
   }
 
+  /** @param {PlaybackReport} state */
   function send(state) {
     try {
       chrome.runtime.sendMessage({ type: MT.MESSAGE.STATE, state }, () => {
@@ -313,6 +322,7 @@
     }
   }
 
+  /** @param {boolean} force send even if nothing changed since the last report */
   function report(force) {
     if (dead) return;
     const state = snapshot();
