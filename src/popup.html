@@ -8,8 +8,10 @@
   <body>
     <header>
       <span class="dot" id="dot"></span>
-      <h1 id="activeName">Music Timer</h1>
-      <span class="today" id="today">today 0m</span>
+      <div class="now-playing">
+        <span class="now-playing__title" id="statusTitle">…</span>
+        <span class="now-playing__context" id="statusContext"></span>
+      </div>
       <button
         id="settingsToggle"
         class="icon-button"
@@ -21,28 +23,53 @@
       >⚙</button>
     </header>
 
+    <div class="timer-label" id="timerLabel">Timer</div>
     <div class="clock" id="clock">0:00:00</div>
-    <div class="status" id="status">Waiting for music…</div>
+    <div class="current-lap" id="currentLap"></div>
 
     <div class="row row--buttons">
-      <button id="lap" class="primary">Lap</button>
-      <button id="toggle" class="ghost">Start</button>
-      <button id="reset" class="ghost">Reset</button>
+      <button id="lap" class="icon-action primary" type="button" aria-label="Record lap" title="Record lap">
+        <svg viewBox="0 0 24 24"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"></path></svg>
+      </button>
+      <button id="toggle" class="icon-action" type="button" aria-label="Start timer" title="Start timer">
+        <svg id="toggleIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg>
+      </button>
+      <button id="reset" class="icon-action ghost" type="button" aria-label="Reset timer" title="Reset timer">
+        <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"></path></svg>
+      </button>
     </div>
 
-    <section id="lapSection" hidden>
-      <h2>Laps</h2>
-      <div class="lap-list" id="laps"></div>
-      <p class="hint">Click a lap to rename it.</p>
+    <section>
+      <button class="section-toggle" id="timersToggle" type="button" aria-expanded="true" aria-controls="timersBody">
+        <span class="section-toggle__label">
+          <svg class="section-toggle__chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"></path></svg>
+          <span class="section-toggle__title">Timers</span>
+          <span class="section-toggle__count" id="timersCount">0</span>
+        </span>
+        <span class="section-toggle__summary" id="timersSummary"></span>
+      </button>
+      <div id="timersBody">
+        <div class="timer-list" id="timers"></div>
+        <div class="row">
+          <button id="addTimer">+ New</button>
+          <button id="renameTimer">Rename</button>
+          <button id="deleteTimer" class="ghost">Delete</button>
+        </div>
+      </div>
     </section>
 
-    <section>
-      <h2>Timers</h2>
-      <div class="timer-list" id="timers"></div>
-      <div class="row">
-        <button id="addTimer">+ New</button>
-        <button id="renameTimer">Rename</button>
-        <button id="deleteTimer" class="ghost">Delete</button>
+    <section id="lapSection" hidden>
+      <button class="section-toggle" id="lapsToggle" type="button" aria-expanded="true" aria-controls="lapsBody">
+        <span class="section-toggle__label">
+          <svg class="section-toggle__chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"></path></svg>
+          <span class="section-toggle__title">Laps</span>
+          <span class="section-toggle__count" id="lapsCount">0</span>
+        </span>
+        <span class="section-toggle__summary" id="lapsSummary"></span>
+      </button>
+      <div id="lapsBody">
+        <div class="lap-list" id="laps"></div>
+        <p class="hint">Click a lap to rename it.</p>
       </div>
     </section>
 

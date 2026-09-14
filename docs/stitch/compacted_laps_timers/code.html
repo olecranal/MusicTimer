@@ -1,0 +1,160 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Music Timer - Stardew Rustic Theme</title>
+<!-- Tailwind CSS v3 CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bark: {
+              950: '#150D0B',
+              900: '#1D1210',
+              850: '#231612',
+              800: '#2A1A16',
+              750: '#34221D',
+              700: '#3E2922',
+              600: '#4E342B',
+              500: '#634438',
+              400: '#855E50',
+            },
+            parchment: {
+              100: '#FAF6EF',
+              200: '#F4EDE2',
+              300: '#E7DCB',
+              400: '#D5C4AF',
+              500: '#BFAF99',
+              600: '#94836F',
+            },
+            foliage: {
+              300: '#8BC34A',
+              400: '#72B558',
+              500: '#5F8D4E',
+              600: '#4D753E',
+              700: '#3D5E31',
+              800: '#2D4524',
+            }
+          },
+          fontFamily: {
+            sans: ['Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace']
+          },
+          boxShadow: {
+            'wood-tile': '0 2px 0 0 #180F0D, inset 0 1px 0 0 rgba(255, 230, 200, 0.12)',
+            'wood-inset': 'inset 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 0 0 rgba(255, 255, 255, 0.04)',
+            'foliage-tile': '0 2px 0 0 #283F20, inset 0 1px 0 0 rgba(255, 255, 255, 0.25)',
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Rustic Wood Styling -->
+<style data-purpose="rustic-textures-and-accents">
+    /* Subtle natural grain and beveled edges */
+    .rustic-border {
+      border: 1px solid #473128;
+    }
+    .rustic-inner-shadow {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+    .timer-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Subtle wooden slat line effect */
+    .wood-slat-divider {
+      background: linear-gradient(to right, transparent, #4A332B 25%, #4A332B 75%, transparent);
+      height: 1px;
+    }
+    /* Custom scrollbar for lap section if needed */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1D1210;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #4A332B;
+      border-radius: 2px;
+    }
+  </style>
+<!-- END: Custom Rustic Wood Styling -->
+</head>
+<body class="bg-[#110B0A] min-h-screen flex items-center justify-center p-4 antialiased selection:bg-foliage-600 selection:text-white">
+<!-- BEGIN: Extension Container Frame (Strict 330px width) -->
+<main class="w-[330px] rounded-2xl bg-bark-900 text-parchment-200 border-2 border-[#432D25] shadow-2xl overflow-hidden flex flex-col relative select-none" data-purpose="extension-popup-window" style="box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(115, 78, 60, 0.2);">
+<!-- BEGIN: Header Section -->
+<header class="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-[#34221C] bg-bark-900" data-purpose="popup-header"><!-- Left side: Status badge & Now Playing Track Info -->
+<div class="flex items-center space-x-2.5 overflow-hidden pr-2 flex-grow min-w-0">
+<!-- Glowing foliage indicator dot -->
+<span class="relative flex h-2.5 w-2.5 flex-shrink-0">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-foliage-400 opacity-60"></span>
+<span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-foliage-400 shadow-[0_0_8px_#72B558]"></span>
+</span>
+<!-- Track Details -->
+<div class="flex flex-col min-w-0 leading-tight truncate">
+<span class="text-[11px] font-medium text-parchment-200 truncate">Nuvole Bianche — Ludovico Einaudi</span>
+<span class="text-[9px] text-parchment-500 truncate">from Deep Focus — Instrumental</span>
+</div>
+</div>
+<!-- Right side: Settings button -->
+<div class="flex items-center flex-shrink-0">
+<button aria-label="Settings" class="h-7 w-7 rounded-lg bg-bark-800 border border-bark-600 text-parchment-400 hover:text-parchment-200 hover:border-foliage-500 flex items-center justify-center transition-colors shadow-wood-tile active:translate-y-0.5 active:shadow-none" type="button">
+<!-- Cog/Settings Icon -->
+<svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+<path d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 13.5 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"></path>
+</svg>
+</button>
+</div></header>
+<!-- END: Header Section -->
+<!-- BEGIN: Timer Readout & Track Info -->
+<section class="pt-4 pb-3 px-4 text-center" data-purpose="active-timer-display">
+<!-- High Contrast Main Digital Clock -->
+<div class="text-[11px] font-semibold tracking-widest text-parchment-400 uppercase mb-1 flex items-center justify-center gap-1.5">Work</div><div class="font-mono text-[46px] leading-tight font-light tracking-tight text-parchment-200 drop-shadow-[0_2px_4px_rgba(0,0,0,0.6)] timer-tabular" style="color: rgb(237, 229, 216);">
+        0:47:13
+      </div><div class="text-[11px] font-medium text-parchment-500 tracking-wide mt-1.5 flex items-center justify-center gap-1.5"><span class="">Work - lap 2</span></div>
+<!-- Currently Playing Music Track Info -->
+<!-- Action Control Buttons: Modern Icons with Rustic Tactile Wood/Foliage Tiles -->
+<div class="grid grid-cols-3 gap-2.5 mt-4" data-purpose="timer-action-buttons">
+<!-- Lap Button (Flag Icon) -->
+<button class="flex items-center justify-center py-2.5 rounded-lg bg-bark-800 hover:bg-bark-750 text-parchment-300 hover:text-white shadow-wood-tile border border-bark-600 active:translate-y-0.5 active:shadow-none transition-all duration-100 group" title="Record Lap" type="button">
+<svg class="w-4 h-4 fill-current transition-transform group-hover:scale-110" style="color: #ede5d8;" viewBox="0 0 24 24">
+<path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"></path>
+</svg>
+</button>
+<!-- Stop Button (Solid Square Icon) -->
+<button class="flex items-center justify-center py-2.5 rounded-lg bg-bark-800 hover:bg-bark-750 text-parchment-300 hover:text-white shadow-wood-tile border border-bark-600 active:translate-y-0.5 active:shadow-none transition-all duration-100 group" title="Stop Timer" type="button">
+<svg class="w-3.5 h-3.5 fill-current transition-transform group-hover:scale-110" viewBox="0 0 24 24">
+<rect height="14" rx="1.5" width="14" x="5" y="5"></rect>
+</svg>
+</button>
+<!-- Reset Button (Counter-clockwise Undo/Reset Arrow) -->
+<button class="flex items-center justify-center py-2.5 rounded-lg bg-bark-800 hover:bg-bark-750 text-parchment-300 hover:text-white shadow-wood-tile border border-bark-600 active:translate-y-0.5 active:shadow-none transition-all duration-100 group" title="Reset Timer" type="button">
+<svg class="w-4 h-4 fill-current transition-transform group-hover:-rotate-45" viewBox="0 0 24 24">
+<path d="M12 5V1L7 6l5 5V7c3.31 0 6 2.69 6 6s-2.69 6-6 6-6-2.69-6-6H4c0 4.42 3.58 8 8 8s8-3.58 8-8-3.58-8-8-8z"></path>
+</svg>
+</button>
+</div>
+</section>
+<!-- END: Timer Readout & Track Info -->
+<!-- Dividing Slat -->
+<div class="wood-slat-divider my-1"></div>
+<!-- BEGIN: Laps Section -->
+<section class="px-4 flex-grow py-1.5" data-purpose="timers-list"><button type="button" class="w-full flex items-center justify-between py-1 px-1 rounded hover:bg-bark-800/50 transition-colors group text-left cursor-pointer" aria-expanded="false"><div class="flex items-center gap-1.5"><svg class="w-3 h-3 text-parchment-500 group-hover:text-parchment-300 transition-transform fill-current" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"></path></svg><span class="text-[9px] font-bold tracking-widest text-parchment-400 group-hover:text-parchment-200 uppercase">Timers</span><span class="text-[8px] px-1 py-0.2 rounded bg-bark-800 text-parchment-400 font-mono">2</span></div><div class="flex items-center gap-1.5"><span class="text-[9px] text-foliage-400 font-medium truncate max-w-[90px]">Work</span><span class="text-[9px] text-bark-400 group-hover:text-parchment-500 font-mono">0:47:13</span></div></button></section><div class="wood-slat-divider my-1"></div><section class="px-4 py-1.5" data-purpose="laps-container"><button type="button" class="w-full flex items-center justify-between py-1 px-1 rounded hover:bg-bark-800/50 transition-colors group text-left cursor-pointer" aria-expanded="false"><div class="flex items-center gap-1.5"><svg class="w-3 h-3 text-parchment-500 group-hover:text-parchment-300 transition-transform fill-current" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"></path></svg><span class="text-[9px] font-bold tracking-widest text-parchment-400 group-hover:text-parchment-200 uppercase">Laps</span><span class="text-[8px] px-1 py-0.2 rounded bg-bark-800 text-parchment-400 font-mono">2</span></div><span class="text-[9px] text-bark-400 group-hover:text-parchment-500 font-mono">Work - lap 2: 0:08:01</span></button></section>
+<!-- END: Laps Section -->
+<!-- Dividing Slat -->
+
+<!-- BEGIN: Timers Management Section -->
+<div class="px-4 bg-bark-950/70 border-t border-bark-800/80 flex items-center gap-2 text-xs text-parchment-400 py-1.5"><svg class="w-3 h-3 text-parchment-500 fill-current flex-shrink-0" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg><span class="text-[11px] text-parchment-400 truncate">YouTube Music</span></div>
+<!-- END: Timers Management Section -->
+<!-- BEGIN: Footer Audio Source Indicator -->
+<!-- END: Footer Audio Source Indicator -->
+</main>
+<!-- END: Extension Container Frame -->
+
+
+
+
+</body></html>

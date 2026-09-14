@@ -17,18 +17,28 @@ const MAX_TIMER_NAME_LENGTH = 40;
 /* Looked up once: render() runs four times a second and these never move. */
 const elements = {
   dot: document.getElementById("dot"),
-  activeName: document.getElementById("activeName"),
-  today: document.getElementById("today"),
+  statusTitle: document.getElementById("statusTitle"),
+  statusContext: document.getElementById("statusContext"),
+  timerLabel: document.getElementById("timerLabel"),
   clock: document.getElementById("clock"),
-  status: document.getElementById("status"),
+  currentLap: document.getElementById("currentLap"),
   settingsToggle: /** @type {HTMLButtonElement} */ (document.getElementById("settingsToggle")),
   settingsPanel: document.getElementById("settingsPanel"),
   lap: document.getElementById("lap"),
   toggle: document.getElementById("toggle"),
+  toggleIcon: document.getElementById("toggleIcon"),
   reset: document.getElementById("reset"),
-  lapSection: document.getElementById("lapSection"),
-  laps: document.getElementById("laps"),
+  timersToggle: /** @type {HTMLButtonElement} */ (document.getElementById("timersToggle")),
+  timersBody: document.getElementById("timersBody"),
+  timersCount: document.getElementById("timersCount"),
+  timersSummary: document.getElementById("timersSummary"),
   timers: document.getElementById("timers"),
+  lapSection: document.getElementById("lapSection"),
+  lapsToggle: /** @type {HTMLButtonElement} */ (document.getElementById("lapsToggle")),
+  lapsBody: document.getElementById("lapsBody"),
+  lapsCount: document.getElementById("lapsCount"),
+  lapsSummary: document.getElementById("lapsSummary"),
+  laps: document.getElementById("laps"),
   addTimer: document.getElementById("addTimer"),
   renameTimer: document.getElementById("renameTimer"),
   deleteTimer: /** @type {HTMLButtonElement} */ (document.getElementById("deleteTimer")),
@@ -49,8 +59,10 @@ let editingId = null;
 /** @type {string | null} lap whose name is being edited inline */
 let editingLapId = null;
 let isConfirmingDelete = false;
-/** Purely local UI state - the worker has no notion of whether this panel is open. */
+/** Purely local UI state - the worker has no notion of whether these are open. */
 let settingsOpen = false;
+let timersExpanded = false;
+let lapsExpanded = false;
 
 /** True while an inline name field is open; a background sync would destroy it. */
 const isEditing = () => Boolean(editingId || editingLapId);
@@ -71,13 +83,15 @@ function formatClock(ms) {
 }
 
 /**
- * Rounded "42m" / "2h 05m", for the day total where seconds are noise.
- * @param {number} ms
+ * The playlist filter and status line show a playlist's full name; the timer row is too
+ * narrow for that, so it shows only the part before an em dash - "Deep Focus —
+ * Instrumental" becomes "Deep Focus". Falls back to the full name when there's no dash.
+ * @param {string} name
  * @returns {string}
  */
-function formatCompact(ms) {
-  const minutes = Math.round(ms / 60000);
-  return minutes < 60 ? `${minutes}m` : `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+function shortenPlaylistName(name) {
+  const cut = name.indexOf(" — ");
+  return cut === -1 ? name : name.slice(0, cut);
 }
 
 /* ----------------------------------------------------------------- transport */
@@ -100,26 +114,50 @@ function command(action, extra = {}) {
 
 /* -------------------------------------------------------------------- render */
 
-/** @returns {string} */
-function statusLine() {
-  if (!snapshot) return "…";
+/**
+ * What the header's now-playing block shows: a title line and an optional context line.
+ * When music is playing and matched to this timer, that's the track and its playlist;
+ * otherwise the title line carries a status message instead, with no context line.
+ * @returns {{ title: string, context: string }}
+ */
+function statusParts() {
+  if (!snapshot) return { title: "…", context: "" };
   const active = snapshot.lastActive;
   if (snapshot.eligible && active) {
     const what = [active.title, active.artist].filter(Boolean).join(" — ") || "Music";
-    return `${what}${active.contextName ? `\nfrom ${active.contextName}` : ""}`;
+    return { title: what, context: active.contextName ? `from ${active.contextName}` : "" };
   }
   if (snapshot.anyPlaying && snapshot.filter) {
-    return `Music is playing, but not from ${snapshot.filter.name}.`;
+    return { title: `Music is playing, but not from ${snapshot.filter.name}.`, context: "" };
   }
   if (snapshot.running && snapshot.mode === "sticky") {
-    return "Counting — music is paused but the timer keeps going.";
+    return { title: "Counting — music is paused but the timer keeps going.", context: "" };
   }
-  if (snapshot.tabs.length === 0) return "Open YouTube Music, Spotify or YouTube to begin.";
-  return "Waiting for music…";
+  if (snapshot.tabs.length === 0) {
+    return { title: "Open YouTube Music, Spotify or YouTube to begin.", context: "" };
+  }
+  return { title: "Waiting for music…", context: "" };
+}
+
+/**
+ * The one line shown in place of the full list while Timers is collapsed: the active
+ * timer's name and running time - the same numbers the clock above is already showing.
+ * @param {number} liveMs
+ */
+function renderTimersSummary(liveMs) {
+  const summary = elements.timersSummary;
+  summary.textContent = "";
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = snapshot.name;
+  summary.append(name, document.createTextNode(" " + formatClock(snapshot.elapsedMs + liveMs)));
 }
 
 /** @param {number} liveMs interpolated ms since the last sync */
 function renderTimers(liveMs) {
+  elements.timersCount.textContent = String(snapshot.timers.length);
+  renderTimersSummary(liveMs);
+
   const box = elements.timers;
   // The local tick must not rebuild a name field the user is typing into.
   const openInput = box.querySelector("input");
@@ -145,7 +183,7 @@ function renderTimers(liveMs) {
 
     const binding = document.createElement("span");
     binding.className = "timer-list__binding";
-    binding.textContent = timer.filterName || "";
+    binding.textContent = timer.filterName ? shortenPlaylistName(timer.filterName) : "";
 
     const time = document.createElement("span");
     time.className = "timer-list__time";
@@ -246,11 +284,32 @@ function buildLapRow({ modifier, name, durationMs }) {
   return row;
 }
 
+/**
+ * The one line shown in place of the full list while Laps is collapsed. Unlike the full
+ * list's open-lap row, this doesn't add "· now" - a single summary line naming one lap is
+ * already unambiguously the current one, so the label would be pure repetition here.
+ * @param {number} liveMs
+ */
+function renderLapsSummary(liveMs) {
+  const summary = elements.lapsSummary;
+  summary.textContent = "";
+  const name = document.createElement("span");
+  name.className = "name";
+  name.textContent = snapshot.currentLap.name;
+  const duration = formatClock(snapshot.currentLap.durationMs + liveMs);
+  summary.append(name, document.createTextNode(`: ${duration}`));
+}
+
 /** The lap in progress on top, then completed laps newest first. Hidden until one exists. */
 function renderLaps(liveMs) {
   const hasLaps = snapshot.laps.length > 0;
   elements.lapSection.hidden = !hasLaps;
   if (!hasLaps) return;
+
+  // Every row the full list would show, open lap included - not just the ones that have
+  // actually finished, which "recorded" would otherwise imply.
+  elements.lapsCount.textContent = String(snapshot.laps.length + 1);
+  renderLapsSummary(liveMs);
 
   const box = elements.laps;
   // The local tick must not rebuild a name field the user is typing into.
@@ -325,29 +384,56 @@ function renderTabs() {
     if (tab.playing) state.className = "tab-row__state--playing";
 
     const label = document.createElement("span");
-    label.textContent = [tab.siteLabel, tab.contextName || tab.title].filter(Boolean).join(" · ");
+    label.textContent = tab.siteLabel;
 
     row.append(state, label);
     elements.tabs.append(row);
   }
 }
 
+/**
+ * The label under the clock: the lap in progress, with "now" set apart the same way the
+ * full lap list already does (this is the "less clear without it" side of that decision -
+ * see renderLapsSummary for the collapsed one-line side).
+ */
+function renderCurrentLap() {
+  const el = elements.currentLap;
+  el.textContent = "";
+  el.append(document.createTextNode(snapshot.currentLap.name + " "));
+  const now = document.createElement("span");
+  now.className = "now";
+  now.textContent = "· now";
+  el.append(now);
+}
+
+/** @param {boolean} running */
+function setToggleIcon(running) {
+  elements.toggleIcon.innerHTML = running
+    ? '<rect x="5" y="5" width="14" height="14" rx="1.5"></rect>'
+    : '<path d="M8 5v14l11-7z"></path>';
+}
+
 function render() {
   if (!snapshot) return;
   const liveMs = snapshot.running ? Date.now() - lastSyncAt : 0;
 
-  elements.activeName.textContent = snapshot.name;
-  elements.activeName.title = snapshot.name;
+  const status = statusParts();
+  elements.statusTitle.textContent = status.title;
+  elements.statusContext.textContent = status.context;
+
+  elements.timerLabel.textContent = snapshot.name;
+  elements.timerLabel.title = snapshot.name;
   elements.clock.textContent = formatClock(snapshot.elapsedMs + liveMs);
-  elements.today.textContent = `today ${formatCompact(snapshot.todayMs + liveMs)}`;
+  renderCurrentLap();
   elements.dot.classList.toggle("dot--live", snapshot.running);
-  elements.status.textContent = statusLine();
 
-  elements.toggle.textContent = snapshot.running ? "Stop" : "Start";
   elements.toggle.classList.toggle("stop", snapshot.running);
+  elements.toggle.setAttribute("aria-label", snapshot.running ? "Stop timer" : "Start timer");
+  elements.toggle.title = snapshot.running ? "Stop timer" : "Start timer";
+  setToggleIcon(snapshot.running);
 
-  renderLaps(liveMs);
   renderTimers(liveMs);
+  renderLaps(liveMs);
 
   elements.deleteTimer.textContent = isConfirmingDelete ? "Sure?" : "Delete";
   elements.deleteTimer.classList.toggle("danger", isConfirmingDelete);
@@ -405,6 +491,28 @@ elements.settingsToggle.addEventListener("click", () => {
 });
 applySettingsOpen();
 
+/** Also local-only: collapsing Timers/Laps to one summary line is a display choice, not state. */
+function applyTimersExpanded() {
+  elements.timersToggle.setAttribute("aria-expanded", String(timersExpanded));
+  elements.timersBody.hidden = !timersExpanded;
+}
+
+function applyLapsExpanded() {
+  elements.lapsToggle.setAttribute("aria-expanded", String(lapsExpanded));
+  elements.lapsBody.hidden = !lapsExpanded;
+}
+
+elements.timersToggle.addEventListener("click", () => {
+  timersExpanded = !timersExpanded;
+  applyTimersExpanded();
+});
+elements.lapsToggle.addEventListener("click", () => {
+  lapsExpanded = !lapsExpanded;
+  applyLapsExpanded();
+});
+applyTimersExpanded();
+applyLapsExpanded();
+
 elements.toggle.addEventListener("click", () =>
   command(snapshot?.running ? MT.ACTION.STOP : MT.ACTION.START)
 );
@@ -443,7 +551,8 @@ elements.useCurrent.addEventListener("click", () => {
   const candidate = snapshot?.candidate;
   if (!candidate) {
     log.info("filter:no-candidate", { tabs: snapshot?.tabs.length ?? 0 });
-    elements.status.textContent = "No playlist detected yet — start playing one first.";
+    elements.statusTitle.textContent = "No playlist detected yet — start playing one first.";
+    elements.statusContext.textContent = "";
     return;
   }
   command(MT.ACTION.SET_FILTER, { filter: candidate });

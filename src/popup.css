@@ -1,11 +1,24 @@
+/* Tokens sourced from docs/stitch/timber_sprout/DESIGN.md's "Palette Architecture" /
+ * "Semantic & Interaction Roles" / "Components > Buttons" sections - treated as the
+ * authoritative values for this theme (its own code.html exports used slightly different
+ * ad hoc Tailwind hex values for the same roles; this reconciles the two in the token's
+ * favor, per the decision to treat the named design system as the source of truth). */
 :root {
-  --bg: #16171c;
-  --panel: #1e2026;
-  --line: #2c2f38;
-  --text: #eceef3;
-  --muted: #9aa0ad;
-  --accent: #1db954;
-  --accent-dim: #14622f;
+  --bg: #241410; /* Canvas Base / Deep heartwood bark */
+  --panel: #3d211a; /* Surface (Panels, Drawers) */
+  --raised: #4a2a22; /* Surface Raised (Cards, Item Planks) */
+  --well: #1e100d; /* Surface Inset (Inputs, Progress Wells) */
+  --line: #4e2e25; /* Level 1 border */
+  --line-strong: #784a36; /* Level 2 / card border, "Aged cedar" */
+  --text: #ebd5b3; /* Text Primary, "Parchment Glow" */
+  --muted: #c89b77; /* Text Secondary, "Weathered Pine" */
+  --faint: #937057; /* Text Muted - the least prominent tier */
+  --accent: #84a968; /* Primary, "Lush sprout green" */
+  --accent-active: #6b8c52; /* Active/Focus variant of the accent */
+  --accent-soft-bg: rgba(132, 169, 104, 0.15); /* "Active State / Sprout Badge" background */
+  --on-accent: #1c2e11; /* Text/icon color on a solid accent fill */
+  --danger-line: #8a4a3a;
+  --danger-text: #e3a58f;
 }
 
 * {
@@ -21,57 +34,98 @@ body {
   font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
 }
 
+/* -------------------------------------------------------------------- header */
+
 header {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-}
-
-header h1 {
-  font-size: 13px;
-  font-weight: 600;
-  margin: 0;
-  flex: 1;
-  letter-spacing: 0.02em;
-}
-
-.today {
-  font-size: 11px;
-  color: var(--muted);
+  padding-bottom: 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--line);
 }
 
 .dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
-  background: #4a4f5c;
+  background: var(--faint);
+  flex: none;
   transition: background 0.2s, box-shadow 0.2s;
 }
 
 .dot--live {
   background: var(--accent);
-  box-shadow: 0 0 0 3px rgba(29, 185, 84, 0.18);
+  box-shadow: 0 0 0 3px var(--accent-soft-bg);
+}
+
+/* What's currently playing - or a status message when nothing is, in its place. */
+.now-playing {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.now-playing__title {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.now-playing__context {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.now-playing__context:empty {
+  display: none;
+}
+
+/* ----------------------------------------------------------------- timer readout */
+
+.timer-label {
+  text-align: center;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-top: 10px;
 }
 
 .clock {
+  font-family: ui-monospace, "SF Mono", Consolas, monospace;
   font-size: 40px;
   font-weight: 300;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   text-align: center;
-  padding: 6px 0 2px;
+  padding: 2px 0;
 }
 
-.status {
+.current-lap {
   text-align: center;
   color: var(--muted);
-  font-size: 12px;
-  min-height: 34px;
-  white-space: pre-line;
-  padding: 0 4px 8px;
-  overflow-wrap: anywhere;
+  font-size: 11px;
+  font-style: italic;
+  padding: 0 4px 10px;
 }
+
+.current-lap .now {
+  color: var(--accent);
+  font-style: normal;
+  font-weight: 500;
+}
+
+/* --------------------------------------------------------------------- buttons */
 
 .row {
   display: flex;
@@ -86,7 +140,7 @@ button {
   flex: 1;
   padding: 8px 10px;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 8px;
   background: var(--panel);
   color: var(--text);
   font: inherit;
@@ -95,22 +149,41 @@ button {
 }
 
 button:hover {
-  background: #262932;
+  background: var(--raised);
 }
 
-button.primary {
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* The three primary actions (Lap / Start-Stop / Reset) are icon-only now - see the SVGs
+ * in popup.html. Each still carries a real aria-label/title; the icon is not the label. */
+.icon-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 8px;
+}
+
+.icon-action svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.icon-action.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #08210f;
-  font-weight: 600;
+  color: var(--on-accent);
 }
 
-button.primary:hover {
-  background: #23cc61;
+.icon-action.primary:hover {
+  background: var(--accent-active);
 }
 
-/* The manual override, which only reads "Stop" while a clock is actually running. */
-button.stop {
+/* The manual override, which only reads as "stop" while a clock is actually running. */
+.icon-action.stop {
   background: transparent;
   border-color: var(--accent);
   color: var(--accent);
@@ -136,22 +209,26 @@ button.icon-button {
 }
 
 button.icon-button[aria-expanded="true"] {
-  background: var(--accent-dim);
+  background: var(--accent-soft-bg);
   border-color: var(--accent);
-  color: #d8ffe6;
+  color: var(--text);
 }
 
-button:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+button.danger {
+  border-color: var(--danger-line);
+  color: var(--danger-text);
 }
+
+/* -------------------------------------------------------------------- sections */
 
 section {
   border-top: 1px solid var(--line);
-  padding-top: 12px;
-  margin-bottom: 12px;
+  padding-top: 10px;
+  margin-bottom: 10px;
 }
 
+/* The settings panel's own two sub-sections keep a plain heading - only Timers and Laps
+ * got the collapsible toggle treatment the Stitch screens actually demonstrated. */
 section h2 {
   font-size: 11px;
   font-weight: 600;
@@ -161,41 +238,84 @@ section h2 {
   margin: 0 0 8px;
 }
 
-.mode-switch {
+/* A section's heading is a toggle: click to collapse it to one summary line. Laps and
+ * Timers both use this - see popup.js's buildSectionToggle(). */
+.section-toggle {
+  width: 100%;
   display: flex;
-  gap: 0;
-  border: 1px solid var(--line);
-  border-radius: 7px;
-  overflow: hidden;
-}
-
-.mode-switch button {
-  border: 0;
-  border-radius: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   background: transparent;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 4px;
+  margin: -4px -4px 8px;
   color: var(--muted);
-  font-size: 12px;
+  cursor: pointer;
 }
 
-.mode-switch button + button {
-  border-left: 1px solid var(--line);
+.section-toggle:hover {
+  background: var(--raised);
+  color: var(--text);
 }
 
-.mode-switch button.on {
-  background: var(--accent-dim);
-  color: #d8ffe6;
+.section-toggle__label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.section-toggle__chevron {
+  width: 11px;
+  height: 11px;
+  fill: currentColor;
+  transition: transform 0.12s ease;
+}
+
+.section-toggle[aria-expanded="false"] .section-toggle__chevron {
+  transform: rotate(-90deg);
+}
+
+.section-toggle__title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.section-toggle__count {
+  font: 600 9px/1 ui-monospace, monospace;
+  background: var(--bg);
+  color: var(--muted);
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+
+/* Shown only while the section is collapsed - the one line that replaces the full list. */
+.section-toggle__summary {
+  font: 500 10px/1 ui-monospace, monospace;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+
+.section-toggle__summary .name {
+  color: var(--accent);
 }
 
 .hint {
   margin: 7px 0 0;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--faint);
 }
 
 .filter {
   background: var(--panel);
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 8px;
   padding: 8px 10px;
   margin-bottom: 8px;
 }
@@ -214,6 +334,33 @@ section h2 {
 .filter__source:empty {
   display: none;
 }
+
+.mode-switch {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.mode-switch button {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.mode-switch button + button {
+  border-left: 1px solid var(--line);
+}
+
+.mode-switch button.on {
+  background: var(--accent-soft-bg);
+  color: var(--text);
+}
+
+/* ---------------------------------------------------------------------- footer */
 
 footer {
   border-top: 1px solid var(--line);
@@ -238,7 +385,7 @@ footer {
   max-height: 148px;
   overflow-y: auto;
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 8px;
   margin-bottom: 8px;
 }
 
@@ -256,11 +403,11 @@ footer {
 }
 
 .timer-list__row:hover {
-  background: #23262e;
+  background: var(--raised);
 }
 
 .timer-list__row--active {
-  background: var(--accent-dim);
+  background: var(--accent-soft-bg);
 }
 
 .timer-list__name {
@@ -285,7 +432,7 @@ footer {
 }
 
 .timer-list__row--active .timer-list__binding {
-  color: #9fd9b4;
+  color: var(--accent);
 }
 
 .timer-list__time {
@@ -315,18 +462,14 @@ footer {
   color: var(--text);
 }
 
-button.danger {
-  border-color: #7a2f33;
-  color: #ff9ea3;
-}
-
 /* ------------------------------------------------------------- lap list */
 
 .lap-list {
   max-height: 152px;
   overflow-y: auto;
+  background: var(--well);
   border: 1px solid var(--line);
-  border-radius: 7px;
+  border-radius: 8px;
 }
 
 .lap-list__row {
@@ -342,7 +485,7 @@ button.danger {
 }
 
 .lap-list__row--open {
-  background: #23262e;
+  background: var(--raised);
 }
 
 .lap-list__row--closed {
@@ -350,7 +493,7 @@ button.danger {
 }
 
 .lap-list__row--closed:hover {
-  background: #23262e;
+  background: var(--raised);
 }
 
 .lap-list__name {
