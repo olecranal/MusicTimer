@@ -38,6 +38,10 @@ body {
   background: var(--bg);
   color: var(--text);
   font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+  /* This is a control surface, not a page of text to select - without this, the browser's
+   * default text cursor and selection highlight show up over every label, count and time
+   * value, as if the whole popup were editable. Only the rename fields opt back in below. */
+  user-select: none;
 }
 
 /* -------------------------------------------------------------------- header */
@@ -462,7 +466,6 @@ footer {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
-  user-select: none; /* double-click renames instead of selecting the text */
 }
 
 .timer-list__row--active .timer-list__name {
@@ -505,6 +508,7 @@ footer {
   border: 1px solid var(--accent);
   background: var(--bg);
   color: var(--text);
+  user-select: text; /* the one place the body-wide "not a text surface" rule doesn't apply */
 }
 
 /* ------------------------------------------------------------- lap list */
@@ -575,6 +579,7 @@ footer {
   border: 1px solid var(--accent);
   background: var(--bg);
   color: var(--text);
+  user-select: text; /* the one place the body-wide "not a text surface" rule doesn't apply */
 }
 
 .lap-list__row--closed:focus-visible {
