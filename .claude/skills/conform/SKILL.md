@@ -1,9 +1,9 @@
 ---
-name: code-review
+name: conform
 description: Audit the MusicTimer codebase against docs/CONFORMANCE.md, the project's checkable coding standard. Runs the type check and test suites first, then works through the numbered requirements and reports PASS/FAIL/N-A with file:line evidence. Use when asked to review the code, run a conformance audit, check quality or standards, find what regressed, or sanity-check before shipping. Accepts an optional scope argument - a category letter (R, S, D, U, M, T), a single requirement id (D-03), or "diff" to check only uncommitted changes.
 ---
 
-# Code review — conformance audit
+# Conform — audit against the project standard
 
 Audit this repository against [`docs/CONFORMANCE.md`](../../../docs/CONFORMANCE.md).
 

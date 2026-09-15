@@ -131,7 +131,7 @@ test/playback.test.js    playback detection, including the burst-of-calls regres
 test/backfill.test.js    injecting into tabs that were already open at install/startup
 docs/BEST_PRACTICES.md   the standards this code is written against
 docs/CONFORMANCE.md      those standards as checkable requirements + an audit log
-.claude/skills/          /code-review: the procedure for auditing against CONFORMANCE.md
+.claude/skills/conform/  /conform: the procedure for auditing against CONFORMANCE.md
 docs/design.md           the popup's visual design brief, for iterating in Google Stitch
 docs/KNOWN_BUGS.md       confirmed problems, not yet fixed
 BACKLOG.md               ideas raised but not built yet
