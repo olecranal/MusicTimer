@@ -5,7 +5,8 @@ explains *why*, this one states **what must be true** and **how to prove it**.
 
 ## How to run this audit
 
-Give an LLM this prompt:
+Run the `/conform` skill ([.claude/skills/conform/SKILL.md](../.claude/skills/conform/SKILL.md)),
+which carries the procedure. Failing that, give an LLM this prompt:
 
 > Audit this repository against `docs/CONFORMANCE.md`. Work through every requirement in
 > order. For each, run the stated Check, then record PASS, FAIL, or N/A with one line of
@@ -14,10 +15,11 @@ Give an LLM this prompt:
 > FAILs, ranked by the severity column.
 
 Run the automated layer first — it settles several requirements in seconds and tells you
-whether the tree is even in a checkable state:
+whether the tree is even in a checkable state. Glob the suites rather than listing them;
+this line has already gone stale once:
 
 ```bash
-npx -y -p typescript@5 tsc --noEmit -p tsconfig.json && node test/background.test.js && node test/migration.test.js
+npx -y -p typescript@5 tsc --noEmit -p tsconfig.json && for f in test/*.test.js; do node "$f" || exit 1; done
 ```
 
 Rules for the auditor:
@@ -388,85 +390,128 @@ naming the condition that makes it safe.
 
 ---
 
+
 ## Accepted debt
 
 Deviations that are known, deliberate, and not to be re-reported. Each needs a reason and a
-trigger that would make it worth fixing.
+trigger that would make it worth fixing. **Check the triggers on every audit** — a fired
+trigger is a finding — and re-run `wc -l` rather than trusting the counts below, which go
+stale.
 
 | Req | Where | Reason | Revisit when |
 |---|---|---|---|
-| R-09 | `src/background.js` (491 lines) | Section-banner comments keep it navigable; splitting it would introduce untested seams in the only correctness-critical module. Doc §2.8 — don't restructure before the pain is real. | It passes ~600 lines, or a second person works on it regularly |
-| R-09 | `src/content.js` (348 lines) | Three site adapters in one file, each a self-contained object literal. Splitting them per-site would create three ~80-line files and a loader, for no reader benefit while they share the same detection core. | A fourth site is added, or an adapter grows past ~120 lines |
-| S-09 | `src/` is near-flat | 6 source files. Feature-first folders would be premature per doc §2.8. | Source files exceed ~10, or a second feature appears |
-| R-12 | `src/popup.css` one-off surface tints | Hover/active tints that exist in exactly one rule each. | A third consumer of the same value appears |
+| R-09 | `src/content.js` (335 lines) | Three site adapters in one file, each a self-contained object literal sharing the same detection core. Splitting them per-site would create three ~80-line files and a loader, for no reader benefit. | A fourth site is added, or an adapter grows past ~120 lines |
+| S-05 | `src/shared/playback.js` has one runtime consumer (`content.js`) | It sits in `shared/` for S-03 and D-10, not for reuse: keeping it free of DOM and chrome APIs is what makes playback detection unit-testable, and `test/playback.test.js` is the second consumer. | A second runtime context needs playback detection, or the testability argument stops holding |
+| S-09 | `src/` is near-flat | 6 source files. Feature-first folders would be premature per BEST_PRACTICES §2.8. | Source files exceed ~10, or a second feature appears |
+
+**Retired 2026-09-15.** The R-09 entry for `src/background.js`: its "passes ~600 lines"
+trigger fired at 641, so it is an open finding now, not debt. The R-12 entry for one-off
+surface tints: its stated reason ("exactly one rule each") stopped being true when
+`rgba(42, 26, 22, 0.5)` appeared in a second rule.
 
 ---
 
-## Baseline audit — 2026-09-12
+## Baseline audit — 2026-09-15
 
-Run after the readability/scalability/debugging iteration.
+Full sweep. The previous baseline was 2026-09-12, which predated laps,
+`shared/playback.js`, tab backfill and the Timber & Sprout UI.
+
+**Automated layer:** `tsc --noEmit` exit 0 · 104 assertions pass / 0 fail across 5 suites
+(backfill 5, background 40, laps 28, migration 13, playback 18).
 
 | Req | Verdict | Evidence |
 |---|---|---|
-| R-01 | PASS | no `var` in `src/` |
-| R-02 | PASS | `HEARTBEAT_MS`, `POLL_MS`, `STALE_MS`, `LOCAL_TICK_MS`, `SYNC_INTERVAL_MS` |
-| R-03 | PASS | `fmt`→`formatClock`, `fmtShort`→`formatCompact`, `snap`→`snapshot`, `.seg`→`.mode-switch` |
-| R-04 | PASS | `running`, `eligible`, `armed`, `isConfirmingDelete` |
-| R-05 | PASS | popup intervals named |
-| R-06 | PASS | `src/shared/contract.js` |
-| R-07 | PASS | — |
-| R-08 | PASS | — |
-| R-09 | debt | background.js, see table above |
-| R-10 | PASS | kebab-case + BEM in `popup.css` |
-| R-11 | PASS | `.live` split into `.dot--live` / `.timer-list__live` |
-| R-12 | debt | see table above |
+| R-01 | PASS | no `var` in `src/**/*.js` |
+| R-02 | PASS | `STALE_MS`, `POLL_MS`, `STALL_WINDOW_MS`, `LOCAL_TICK_MS`, `SYNC_INTERVAL_MS` |
+| R-03 | PASS | no truncated identifiers |
+| R-04 | PASS | `isConfirmingDelete`, `isEditing`, `settingsOpen`, `eligible` |
+| R-05 | PASS | remaining literals are unit arithmetic (1000, 3600, 60000) inside formatters. Minor: `60000` doubles as a badge threshold at background.js:313 and deserves a name |
+| R-06 | PASS | no `mt:*` literal outside `shared/contract.js` |
+| R-07 | PASS | spot-checked; comments carry rationale, including the U-01 cross-reference at popup.js:367 |
+| R-08 | PASS | none |
+| R-09 | **FAIL** | `background.js` 641 (its own ~600 trigger fired), `popup.js` 573, `popup.css` 588 — all over 300, none currently covered by debt |
+| R-10 | PASS | no camelCase class in `popup.css` |
+| R-11 | PASS | no modifier reused across unrelated blocks |
+| R-12 | **FAIL** | 4 raw values outside `:root`; `rgba(42,26,22,0.5)` now in two rules (popup.css:263, :546), so the old debt reason no longer holds |
 | R-13 | PASS | `tsc --noEmit` exit 0 |
-| R-14 | PASS | all 5 files in `src/` carry `// @ts-check` |
-| R-15 | PASS | probe caught 5/5 deliberate bugs (typo, bad action, bad chrome API, bad field, wrong arity) |
-| S-01 | PASS | `chrome.storage` only in `background.js` accessors |
-| S-02 | PASS | elapsed derived, never stored twice |
-| S-03 | FAIL | `popup.js` mixes transport, view state, and DOM — S3, deferred |
-| S-04 | PASS | `shared/` only |
-| S-05 | PASS | both shared files used by 3 contexts |
-| S-06 | PASS | `version: 2` + `test/migration.test.js` |
-| S-07 | PASS | `elements` cached at init |
-| S-08 | PASS | — |
-| S-09 | debt | see table above |
-| D-01 | PASS | `src/shared/logger.js` |
-| D-02 | PASS | all call sites `namespace:event` + object |
-| D-03 | PASS | all catches log or annotated |
-| D-04 | PASS | `installGlobalErrorHandlers()` in all 3 contexts |
-| D-05 | PASS | `command:unknown-action` warn |
-| D-06 | PASS | `runtime:last-error` warn-once |
-| D-07 | PASS | `adapter:*-failed`, `source:stale`, `snapshot:empty` |
-| D-08 | PASS | `warnOnce` on all poll-reachable paths |
+| R-14 | PASS | 6/6 files in `src/` carry `// @ts-check` |
+| R-15 | PASS | probe caught 5/5, including the new `CurrentLap` and `lapStartMs` fields |
+| S-01 | PASS | `chrome.storage` only in background.js, behind get/put accessors |
+| S-02 | PASS | elapsed derived from `{accumulatedMs, runningSince}`, never stored twice |
+| S-03 | **FAIL** | `popup.js` carries 50 `document`/`getElementById` references alongside behaviour — unchanged since the last baseline |
+| S-04 | PASS | no cross-feature imports; `shared/` only |
+| S-05 | debt | `playback.js` has one runtime consumer — see debt table |
+| S-06 | **FAIL** | `state.version` is hard-coded 2 and was never bumped when laps were added. The laps migration shape-sniffs instead (`if (!Array.isArray(timer.laps))`), so the version field no longer identifies the schema it labels |
+| S-07 | PASS | no `getElementById` in the render path; `elements` cached at init |
+| S-08 | PASS | single-call `render*` helpers are decomposition of one long function, not speculative abstraction |
+| S-09 | debt | 6 source files — trigger not fired |
+| D-01 | PASS | no bare `console.*` outside `shared/logger.js` |
+| D-02 | PASS | 39 call sites, every event string a literal (interpolation appears only in `warnOnce` keys, which is their purpose) |
+| D-03 | PASS | 8 catch blocks, all log |
+| D-04 | PASS | `installGlobalErrorHandlers` in all three contexts |
+| D-05 | PASS | `command:unknown-action` warns at background.js:467 |
+| D-06 | PASS | `lastError` read and surfaced at content.js:293 |
+| D-07 | PASS | `adapter:*-failed`, `source:stale`, `inject:backfill-failed` |
+| D-08 | PASS | `warnOnce` on every poll-reachable path |
 | D-09 | PASS | `mtLogger.setLevel` / `MT_LOG_LEVEL` |
-| D-10 | PASS | harness `Date.now` proxy + `advance()` |
-| D-11 | **FAIL** | playback detection extracted to `shared/playback.js` and covered by `test/playback.test.js`; the per-site adapters (track/context selectors) still have no fixture tests — S1 |
+| D-10 | PASS | fake clock via `Date.now` proxy + `advance()` |
+| D-11 | **FAIL** | narrowed but not closed: `playback.js` now has 18 assertions, but the three site adapters in `content.js` still have no fixture tests — no test file references `adapters`, `buttonPlaying`, or any selector |
 | D-12 | PASS | harness stubs `chrome` only |
-| U-01 | **FAIL** | timer rows are `<div>` with click handlers — S1 |
-| U-02 | PASS | `button:focus-visible` + `.lap-list__row--closed:focus-visible`; only covers elements that can receive focus at all, so it does not reach the timer rows blocked by U-01/U-07 |
-| U-04 | **FAIL** | `#status` has no `aria-live` — S1 |
-| U-05 | **FAIL** | transitions with no reduced-motion block — S2 |
-| U-07 | **FAIL** | timer switching is mouse-only — S1 |
-| U-08 | **FAIL** | delete confirmation has no Escape path — S2 |
-| M-01…M-06 | PASS | — |
-| T-01 | PASS | `{ accumulatedMs, runningSince }` |
-| T-02 | PASS | epoch timestamps, must survive worker death |
-| T-03 | PASS | documented at `content.js` poll |
+| U-01 | **FAIL** | lap rows were fixed (role, tabIndex, keydown at popup.js:366-380); timer rows are still a bare `<div>` plus click at popup.js:168/211 |
+| U-02 | PASS | `button:focus-visible` and `.lap-list__row--closed:focus-visible`; it cannot reach the timer rows, which U-01 keeps unfocusable |
+| U-03 | PASS | focus ring `--accent #72b558` on `--panel` = 6.73:1 (needs 3) |
+| U-04 | **FAIL** | no `aria-live` anywhere; the now-playing block rewrites without user action |
+| U-05 | **FAIL** | 3 transitions (popup.css:64, :154, :272) with no `prefers-reduced-motion` block |
+| U-06 | **FAIL** | `--warm-muted #855e50` on `--bg` = 3.24:1, needs 4.5 — used for the "recorded" label and collapsed-summary times. Every other pairing passes (`--text` 15.75, `--muted` 10.77, `--danger` 8.83) |
+| U-07 | **FAIL** | selecting a timer is mouse-only; laps are now keyboard-operable |
+| U-08 | **FAIL** | the "Sure?" delete confirmation has no Escape or click-away cancel |
+| U-09 | PASS | `statusParts()` branches for playing, filtered-out, sticky-paused, no-tabs and waiting |
+| U-10 | PASS | `lang="en"`, `<title>`, `aria-label` on every icon button |
+| M-01 | PASS | no mutable worker global carries cross-event state |
+| M-02 | PASS | all 5 `addListener` calls at top level, none nested |
+| M-03 | PASS | all three async branches `return true` |
+| M-04 | PASS | no `setTimeout`/`setInterval` in the worker |
+| M-05 | PASS | `storage`, `alarms`, `scripting` all used; `tabs` deliberately not requested — `tabs.query` rides on host permissions |
+| M-06 | PASS | no inline script |
+| T-01 | PASS | `{accumulatedMs, runningSince}`, never accumulated per tick |
+| T-02 | PASS | epoch timestamps, required to survive worker death |
+| T-03 | PASS | throttling assumption documented at the content.js poll |
 
-**Outstanding:** U-01, U-04, U-05, U-07, U-08 (deferred — UI pass not yet run), D-11, S-03.
+**Open, by severity.** S1: R-09 (background.js past its own trigger), S-06, D-11, U-01,
+U-04, U-06, U-07. S2: S-03, U-05, U-08. S3: R-12.
+
+**Movement since 2026-09-12.** Fixed: U-02, and U-01/U-07 for lap rows only. Newly failing:
+R-09 (background.js 491 → 641; popup.js and popup.css both newly over), R-12, S-06, U-06.
+Unchanged: S-03, D-11 (narrowed), and U-01/U-04/U-05/U-07/U-08 for timer rows.
+
+### Not in the checklist
+
+Observations from this run that no requirement covers. Candidates for new requirements, not
+conformance verdicts.
+
+- **Reuse is healthier than the file sizes suggest.** A structural scan for duplicated
+  5-line blocks across all six source files found 3, two of which overlap the same region.
+  `buildInlineNameInput` already serves both the timer and lap rename flows through an
+  `onCommit`/`onCancel` spec, and `firstText` is shared by all three site adapters. The one
+  residue is a 4-line `append / querySelector / focus / select` epilogue repeated at
+  popup.js:173 and :356.
+- **No requirement covers duplication directly.** R-06 catches duplicated *string literals*
+  only. A "no duplicated logic block" rule would have to be judgement-based, since the three
+  site adapters are deliberately parallel rather than redundant.
+- **Contrast is checked by hand.** U-03 and U-06 required computing ratios manually; nothing
+  in the toolchain would catch a palette regression.
 
 ### Toolchain, as of this audit
 
 | Layer | Covers | Runs |
 |---|---|---|
 | `tsc --noEmit` + `types/` | R-13, R-14, R-15; mechanically prevents R-06 regressions | editor, on every keystroke; CLI on demand |
-| `node test/*.js` | T-01, T-02, S-06, D-10, D-12 | CLI, ~1s |
-| This document, read by an LLM | everything requiring judgment | occasionally |
+| `node test/*.js` (5 suites, 104 assertions) | T-01, T-02, D-10, D-12 | CLI, ~1s |
+| `/conform` skill + this document | everything requiring judgement | on request |
 
 `types/` is hand-written rather than `@types/chrome`, so the repo keeps zero dependencies
 and no `node_modules`. The trade is that a chrome API we have not declared is an error
 rather than a silent any — which is the intended behaviour, not a defect: adding to
-`types/chrome.d.ts` should be a conscious act. Not yet automated: ESLint and Prettier,
-which would need a `package.json` this project deliberately does not have.
+`types/chrome.d.ts` should be a conscious act. Not yet automated: ESLint and Prettier, which
+would need a `package.json` this project deliberately does not have; and contrast checking,
+which caught U-06 this run only because it was computed by hand.
