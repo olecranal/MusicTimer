@@ -472,6 +472,11 @@ section {
   background: rgba(35, 22, 18, 0.6); /* bark-850/60 */
   border: 1px solid var(--row-border);
   cursor: pointer;
+  /* This is a <button>, and the UA stylesheet centres button text. The title escapes that
+   * because it sits in a flex row (flex placement ignores text-align), but the description
+   * is a plain block <p>, so it inherited the centring and sat indented by
+   * (boxWidth - lineWidth) / 2 - up to 43px, and varying per card as the copy changed. */
+  text-align: left;
 }
 
 .option-card:hover {
