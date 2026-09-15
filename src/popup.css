@@ -1,24 +1,29 @@
-/* Tokens sourced from docs/stitch/timber_sprout/DESIGN.md's "Palette Architecture" /
- * "Semantic & Interaction Roles" / "Components > Buttons" sections - treated as the
- * authoritative values for this theme (its own code.html exports used slightly different
- * ad hoc Tailwind hex values for the same roles; this reconciles the two in the token's
- * favor, per the decision to treat the named design system as the source of truth). */
+/* Tokens are the literal values from the two Stitch exports this theme was built from -
+ * docs/stitch/rustic_wood_forest_green/code.html and .../compacted_laps_timers/code.html -
+ * not the accompanying DESIGN.md, which turned out to use slightly different hex values for
+ * the same roles (its own generated system doc had drifted from what was actually exported).
+ * Named after the Tailwind config both files shared, so a value can be checked against its
+ * source: bark-900, foliage-400, etc.
+ */
 :root {
-  --bg: #241410; /* Canvas Base / Deep heartwood bark */
-  --panel: #3d211a; /* Surface (Panels, Drawers) */
-  --raised: #4a2a22; /* Surface Raised (Cards, Item Planks) */
-  --well: #1e100d; /* Surface Inset (Inputs, Progress Wells) */
-  --line: #4e2e25; /* Level 1 border */
-  --line-strong: #784a36; /* Level 2 / card border, "Aged cedar" */
-  --text: #ebd5b3; /* Text Primary, "Parchment Glow" */
-  --muted: #c89b77; /* Text Secondary, "Weathered Pine" */
-  --faint: #937057; /* Text Muted - the least prominent tier */
-  --accent: #84a968; /* Primary, "Lush sprout green" */
-  --accent-active: #6b8c52; /* Active/Focus variant of the accent */
-  --accent-soft-bg: rgba(132, 169, 104, 0.15); /* "Active State / Sprout Badge" background */
-  --on-accent: #1c2e11; /* Text/icon color on a solid accent fill */
-  --danger-line: #8a4a3a;
-  --danger-text: #e3a58f;
+  --bg: #1d1210; /* bark-900 - the popup's own surface (Stitch's outer #110B0A was just its demo backdrop, not part of the popup) */
+  --panel: #2a1a16; /* bark-800 - buttons, small icon buttons */
+  --panel-hover: #34221d; /* bark-750 */
+  --row-bg: #231612; /* bark-850 - timer list rows */
+  --row-border: #3e2922; /* bark-700 */
+  --border: #4e342b; /* bark-600 - button borders */
+  --well-bg: rgba(21, 13, 11, 0.7); /* bark-950/70 - the lap list's inset well */
+  --text: #f4ede2; /* parchment-200 */
+  --text-clock: #ede5d8; /* literal inline override used for the clock digits and the lap-flag icon */
+  --muted: #d5c4af; /* parchment-400 */
+  --muted-2: #bfaf99; /* parchment-500 */
+  --button-text: #f4ede2; /* parchment-200. Stitch's export applies text-parchment-300 to these buttons, but that Tailwind color was malformed in its own config (#E7DCB, five digits) - verified in a real browser that the utility silently fails to generate, so the button text actually just inherits the card's own parchment-200, not a distinct tone */
+  --warm-muted: #855e50; /* bark-400 - "recorded" label, collapsed-summary time values */
+  --accent: #72b558; /* foliage-400 - dot, focus ring, mode-switch active bg */
+  --accent-bright: #7eb36b; /* literal - active-row time, open-lap time */
+  --accent-soft: #6da25a; /* literal - the "now" word specifically */
+  --accent-hover: #5f8d4e; /* foliage-500 - settings button hover border */
+  --danger: #fda4af; /* rose-300 - delete button hover */
 }
 
 * {
@@ -39,24 +44,24 @@ body {
 header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding-bottom: 10px;
   margin-bottom: 4px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--panel-hover);
 }
 
 .dot {
-  width: 9px;
-  height: 9px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: var(--faint);
+  background: var(--warm-muted);
   flex: none;
   transition: background 0.2s, box-shadow 0.2s;
 }
 
 .dot--live {
   background: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-soft-bg);
+  box-shadow: 0 0 8px var(--accent);
 }
 
 /* What's currently playing - or a status message when nothing is, in its place. */
@@ -68,8 +73,8 @@ header {
 
 .now-playing__title {
   display: block;
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -78,8 +83,8 @@ header {
 
 .now-playing__context {
   display: block;
-  font-size: 10px;
-  color: var(--muted);
+  font-size: 9px;
+  color: var(--muted-2);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -99,30 +104,26 @@ header {
   text-transform: uppercase;
   color: var(--muted);
   padding-top: 10px;
+  margin-bottom: 4px;
 }
 
 .clock {
   font-family: ui-monospace, "SF Mono", Consolas, monospace;
-  font-size: 40px;
+  font-size: 46px;
   font-weight: 300;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   text-align: center;
-  padding: 2px 0;
+  color: var(--text-clock);
+  padding: 0;
 }
 
 .current-lap {
   text-align: center;
-  color: var(--muted);
+  color: var(--muted-2);
   font-size: 11px;
-  font-style: italic;
-  padding: 0 4px 10px;
-}
-
-.current-lap .now {
-  color: var(--accent);
-  font-style: normal;
   font-weight: 500;
+  padding: 6px 4px 10px;
 }
 
 /* --------------------------------------------------------------------- buttons */
@@ -139,17 +140,18 @@ header {
 button {
   flex: 1;
   padding: 8px 10px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--panel);
-  color: var(--text);
+  color: var(--button-text);
   font: inherit;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.1s, color 0.1s;
 }
 
 button:hover {
-  background: var(--raised);
+  background: var(--panel-hover);
+  color: var(--text);
 }
 
 button:focus-visible {
@@ -157,8 +159,8 @@ button:focus-visible {
   outline-offset: 1px;
 }
 
-/* The three primary actions (Lap / Start-Stop / Reset) are icon-only now - see the SVGs
- * in popup.html. Each still carries a real aria-label/title; the icon is not the label. */
+/* Lap / Start-Stop / Reset: identical neutral chrome, distinguished only by icon - Stitch
+ * never fills or outlines any one of them as a "primary" action. */
 .icon-action {
   display: flex;
   align-items: center;
@@ -172,26 +174,13 @@ button:focus-visible {
   fill: currentColor;
 }
 
-.icon-action.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--on-accent);
-}
-
-.icon-action.primary:hover {
-  background: var(--accent-active);
-}
-
-/* The manual override, which only reads as "stop" while a clock is actually running. */
-.icon-action.stop {
-  background: transparent;
-  border-color: var(--accent);
-  color: var(--accent);
+.icon-action:hover {
+  color: #fff; /* literal hover:text-white on these three buttons specifically */
 }
 
 button.ghost {
   background: transparent;
-  color: var(--muted);
+  color: var(--muted-2);
 }
 
 /* The gear in the header. Fixed square, not a flex(1) row button like the rest. */
@@ -208,21 +197,24 @@ button.icon-button {
   color: var(--muted);
 }
 
-button.icon-button[aria-expanded="true"] {
-  background: var(--accent-soft-bg);
-  border-color: var(--accent);
+button.icon-button:hover {
   color: var(--text);
+  border-color: var(--accent-hover);
+}
+
+button.icon-button[aria-expanded="true"] {
+  color: var(--text);
+  border-color: var(--accent-hover);
 }
 
 button.danger {
-  border-color: var(--danger-line);
-  color: var(--danger-text);
+  color: var(--danger);
 }
 
 /* -------------------------------------------------------------------- sections */
 
 section {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--panel-hover);
   padding-top: 10px;
   margin-bottom: 10px;
 }
@@ -230,16 +222,16 @@ section {
 /* The settings panel's own two sub-sections keep a plain heading - only Timers and Laps
  * got the collapsible toggle treatment the Stitch screens actually demonstrated. */
 section h2 {
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
+  letter-spacing: 0.08em;
+  color: var(--muted-2);
   margin: 0 0 8px;
 }
 
 /* A section's heading is a toggle: click to collapse it to one summary line. Laps and
- * Timers both use this - see popup.js's buildSectionToggle(). */
+ * Timers both use this - see popup.js's applyTimersExpanded/applyLapsExpanded. */
 .section-toggle {
   width: 100%;
   display: flex;
@@ -249,14 +241,14 @@ section h2 {
   background: transparent;
   border: 0;
   border-radius: 6px;
-  padding: 4px 4px;
+  padding: 4px;
   margin: -4px -4px 8px;
-  color: var(--muted);
+  color: var(--muted-2);
   cursor: pointer;
 }
 
 .section-toggle:hover {
-  background: var(--raised);
+  background: rgba(42, 26, 22, 0.5); /* bark-800/50 */
   color: var(--text);
 }
 
@@ -267,9 +259,10 @@ section h2 {
 }
 
 .section-toggle__chevron {
-  width: 11px;
-  height: 11px;
+  width: 12px;
+  height: 12px;
   fill: currentColor;
+  color: var(--muted-2);
   transition: transform 0.12s ease;
 }
 
@@ -282,24 +275,31 @@ section h2 {
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  color: var(--muted);
 }
 
 .section-toggle__count {
-  font: 600 9px/1 ui-monospace, monospace;
-  background: var(--bg);
+  font: 400 8px/1 ui-monospace, monospace;
+  background: var(--panel);
   color: var(--muted);
   border-radius: 4px;
-  padding: 2px 5px;
+  padding: 2px 4px;
 }
 
 /* Shown only while the section is collapsed - the one line that replaces the full list. */
 .section-toggle__summary {
-  font: 500 10px/1 ui-monospace, monospace;
-  color: var(--faint);
+  font: 500 9px/1 ui-monospace, monospace;
+  color: var(--warm-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 150px;
+}
+
+/* Only earns its keep while the full list is hidden - shown alongside it would just repeat
+ * what the list already says, working against the whole point of collapsing. */
+.section-toggle[aria-expanded="true"] .section-toggle__summary {
+  display: none;
 }
 
 .section-toggle__summary .name {
@@ -309,12 +309,12 @@ section h2 {
 .hint {
   margin: 7px 0 0;
   font-size: 11px;
-  color: var(--faint);
+  color: var(--muted-2);
 }
 
 .filter {
   background: var(--panel);
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
   margin-bottom: 8px;
@@ -327,7 +327,7 @@ section h2 {
 
 .filter__source {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--muted-2);
   margin-top: 2px;
 }
 
@@ -338,7 +338,7 @@ section h2 {
 .mode-switch {
   display: flex;
   gap: 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -347,26 +347,26 @@ section h2 {
   border: 0;
   border-radius: 0;
   background: transparent;
-  color: var(--muted);
+  color: var(--muted-2);
   font-size: 12px;
 }
 
 .mode-switch button + button {
-  border-left: 1px solid var(--line);
+  border-left: 1px solid var(--border);
 }
 
 .mode-switch button.on {
-  background: var(--accent-soft-bg);
-  color: var(--text);
+  background: var(--panel-hover);
+  color: var(--accent);
 }
 
 /* ---------------------------------------------------------------------- footer */
 
 footer {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--panel-hover);
   padding-top: 10px;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--muted-2);
 }
 
 .tab-row {
@@ -384,30 +384,29 @@ footer {
 .timer-list {
   max-height: 148px;
   overflow-y: auto;
-  border: 1px solid var(--line);
   border-radius: 8px;
   margin-bottom: 8px;
 }
 
+/* Active and inactive rows share one background - Stitch tells them apart with text
+ * weight and the accent-colored time/running-icon, not a highlighted row. */
 .timer-list__row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 7px 10px;
+  padding: 8px 12px;
   cursor: pointer;
-  border-bottom: 1px solid var(--line);
+  background: var(--row-bg);
+  border: 1px solid var(--row-border);
+  border-radius: 8px;
 }
 
-.timer-list__row:last-child {
-  border-bottom: 0;
+.timer-list__row + .timer-list__row {
+  margin-top: 6px;
 }
 
 .timer-list__row:hover {
-  background: var(--raised);
-}
-
-.timer-list__row--active {
-  background: var(--accent-soft-bg);
+  border-color: var(--border);
 }
 
 .timer-list__name {
@@ -415,10 +414,11 @@ footer {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: var(--text);
 }
 
 .timer-list__row--active .timer-list__name {
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .timer-list__binding {
@@ -431,23 +431,20 @@ footer {
   white-space: nowrap;
 }
 
-.timer-list__row--active .timer-list__binding {
-  color: var(--accent);
-}
-
 .timer-list__time {
   font-variant-numeric: tabular-nums;
   font-size: 12px;
+  font-weight: 600;
   color: var(--muted);
   flex: none;
 }
 
 .timer-list__row--active .timer-list__time {
-  color: var(--text);
+  color: var(--accent-bright);
 }
 
 .timer-list__live {
-  color: var(--accent);
+  color: var(--accent-bright);
   flex: none;
 }
 
@@ -467,25 +464,26 @@ footer {
 .lap-list {
   max-height: 152px;
   overflow-y: auto;
-  background: var(--well);
-  border: 1px solid var(--line);
+  background: var(--well-bg);
+  border: 1px solid var(--row-border);
   border-radius: 8px;
+  padding: 6px;
 }
 
 .lap-list__row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 10px;
-  border-bottom: 1px solid var(--line);
+  padding: 6px 8px;
+  border-radius: 6px;
 }
 
-.lap-list__row:last-child {
-  border-bottom: 0;
+.lap-list__row + .lap-list__row {
+  margin-top: 4px;
 }
 
 .lap-list__row--open {
-  background: var(--raised);
+  background: rgba(35, 22, 18, 0.8); /* bark-850/80 */
 }
 
 .lap-list__row--closed {
@@ -493,7 +491,7 @@ footer {
 }
 
 .lap-list__row--closed:hover {
-  background: var(--raised);
+  background: rgba(42, 26, 22, 0.5); /* bark-800/50 */
 }
 
 .lap-list__name {
@@ -512,11 +510,12 @@ footer {
   flex: none;
   font-variant-numeric: tabular-nums;
   font-size: 12px;
-  color: var(--muted);
+  font-weight: 600;
+  color: var(--muted-2);
 }
 
 .lap-list__row--open .lap-list__time {
-  color: var(--accent);
+  color: var(--accent-bright);
 }
 
 .lap-list__input {

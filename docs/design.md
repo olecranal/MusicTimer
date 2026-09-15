@@ -9,21 +9,22 @@ trying to settle everything at once.
 Music Timer is an Edge/Chrome extension popup that times listening sessions on YouTube
 Music, Spotify and YouTube. It's a small, dense, dark UI: a clock, a lap list, a list of
 named timers, and a settings panel tucked behind a gear icon. Its visual design is the
-**Timber & Sprout** theme, designed in Google Stitch and shipped in iteration 2 (see the
-log) — a warm rustic-wood palette with a moss-green accent, not the pastel direction
-originally briefed in iteration 1 (that request produced this instead; see the log entry
-for why it was kept).
+**Timber & Sprout** theme — a warm rustic-wood palette with a moss-green accent, not the
+pastel direction originally briefed in iteration 1 (that request produced this instead; see
+the log for why it was kept). Built by copying the literal values out of two Stitch exports
+(`docs/stitch/`) rather than designing from them — see the v3 log entry for what that
+distinction cost the first pass at this.
 
 ## Canvas
 
 - **Width: 330px, fixed.** This matches the real shipped `popup.css` and is the true canvas
   — a Chrome/Edge extension popup isn't user-resizable, so this isn't a suggestion, it's the
   actual frame any mock has to fit.
-- **Height: content-driven, not fixed.** It ranges roughly 340–560px depending on how much
-  is expanded: Timers and Laps each collapse to a one-line summary by default (directive 5,
-  iteration 2), and the settings panel is collapsed behind the gear until opened. Design for
-  a range, not one exact box, and lean toward Chrome's own convention of no scrolling in the
-  common case.
+- **Height: content-driven, not fixed.** It ranges roughly 340–590px: Timers and Laps
+  default to expanded (matching Stitch's base screen, which has no collapse control at all)
+  and can each be collapsed to a one-line summary via a chevron (directive 5); the settings
+  panel is collapsed behind the gear until opened. Design for a range, not one exact box, and
+  lean toward Chrome's own convention of no scrolling in the common case.
 - **Reference screenshot:** [`design-reference-popup.png`](design-reference-popup.png) — a
   real render of the current shipped UI, not a mockup or a redrawn approximation, kept in
   sync with whatever iteration is live. Paste this in as Stitch's starting reference image
@@ -37,13 +38,21 @@ for why it was kept).
   timer's own name and its daily total are no longer here (moved / dropped — see iteration 2).
 - **Timer label** — small caps, above the clock: the active timer's name (e.g. "WORK")
 - **Clock** — the big elapsed-time readout
-- **Current lap** — under the clock: the lap in progress, e.g. "Work - lap 2 · now"
-- **Primary action row** — Lap / Start-or-Stop / Reset, icon-only (directive 1, iteration 2)
-- **Timers section** — collapsible (directive 5): expanded shows the full list with
-  + New / Rename / Delete; collapsed shows one line, the active timer's name and time
-- **Laps section** — collapsible, same pattern; expanded shows the lap in progress then past
-  laps newest-first (click one to rename); collapsed shows one line, `<lap name>: <time>`
-  with no "· now" — a single summary line naming one lap is already unambiguous
+- **Current lap** — under the clock: the lap in progress by name only, e.g. "Work - lap 2" —
+  no "· now" here; that badge belongs only to the full lap list's open row (a different
+  element - the two were briefly conflated, see the v3 log entry)
+- **Primary action row** — Lap / Start-or-Stop / Reset, icon-only (directive 1). All three
+  share one neutral button style; nothing is filled or outlined as "primary" — Stitch
+  distinguishes them only by icon
+- **Timers section** — collapsible (directive 5), expanded by default: expanded shows the
+  full list with + New / Rename / Delete; collapsed shows one line, the active timer's name
+  and time. The active row shares its background with every other row - it's told apart by
+  text weight and an accent-colored time, not a highlight
+- **Laps section** — collapsible, same pattern, expanded by default; expanded shows the lap
+  in progress then past laps newest-first (click one to rename); collapsed shows one line,
+  `<lap name>: <time>` with no "· now" — a single summary line naming one lap is already
+  unambiguous. The summary line only shows while collapsed - once the full list is visible it
+  would just repeat what the list already says
 - **Settings panel** — collapsed by default behind the gear: a mode switch ("Follow the
   music" / "Only when I say") and a playlist filter ("Use current" / "Any music")
 - **Footer** — which open tabs are playing (site name only, no track/context — the header
@@ -89,8 +98,9 @@ Never lorem ipsum — this is what real usage actually looks like:
      "`<lap> · now`" (needed - a second, finished lap is also visible there, so which one is
      current isn't obvious without it). The collapsed one-line summary drops "now" and uses
      "`<lap>: <time>`" instead (a single line naming one lap is already unambiguous).
-  5. **Timers and Laps are now collapsible**, each defaulting to collapsed - a one-line
-     summary (name + time) in place of the full list, toggled by a chevron.
+  5. **Timers and Laps are now collapsible**, a one-line summary (name + time) in place of
+     the full list, toggled by a chevron. (First built defaulting to collapsed; corrected to
+     default expanded in v3 - see below.)
   6. **Playlist names truncate progressively with space**: full ("Deep Focus —
      Instrumental") in the header; shortened to the part before the em dash ("Deep Focus")
      in the timer row; dropped entirely in the collapsed summary.
@@ -100,9 +110,38 @@ Never lorem ipsum — this is what real usage actually looks like:
      (`#241410`/`#3d211a`/`#4a2a22`) with a moss-green accent (`#84a968`), which is what
      "pastel... cozy" turned into once actually explored in Stitch. Kept as the new
      direction rather than pushed back toward pale pastel.
-  9. **`DESIGN.md`'s documented tokens took precedence** over the two exports' own slightly
-     different ad hoc Tailwind values for the same roles (e.g. its `primary: #84a968` over
-     the exports' `foliage-400: #72B558`), since it's the more deliberately named, complete
-     system. `popup.css`'s `:root` now holds these as real custom properties - the raw hex
+  9. **The two exports' literal Tailwind values are authoritative**, not `DESIGN.md` -
+     corrected in v3 below, where this was originally decided the other way around.
+     `popup.css`'s `:root` now holds these as real custom properties either way - the raw hex
      values scattered outside `:root` that iteration 1 flagged (`docs/BEST_PRACTICES.md`
      §1.6) are gone, replaced while every value was being touched anyway.
+
+- **2026-09-14 — v3, corrected to match the exports literally.** Jason's read: "you took a
+  lot of liberties with the design" - accurate. v2 had designed *from* the two Stitch
+  exports rather than copying them, and line-by-line comparison against
+  `docs/stitch/*/code.html` turned up real deviations, all reverted:
+
+  - **Colors came from `DESIGN.md`, not the exports** - flagged by Jason as the single
+    biggest problem. Every token in `popup.css` now traces to a literal value in the two
+    `code.html` files (verified by reading computed styles back from a real render of them,
+    not just the source), not the accompanying system doc, which had drifted from what was
+    actually exported. One exception, kept on request: the collapsed Laps summary's lap name
+    stays accent-green, which Jason said he liked, even though the export's own markup left
+    that line a single uncolored span.
+  - **Lap was a filled, accent-colored "primary" button; Stop had its own outlined style.**
+    Neither exists in the exports - all three action buttons share one identical neutral
+    button style there, distinguished only by which icon sits inside them.
+  - **The active timer row had a highlighted background.** The exports give active and
+    inactive rows the same background; only text weight and an accent-colored time (plus a
+    small running-triangle icon) mark the active one.
+  - **"· now" and italics leaked onto the under-clock current-lap label.** That styling
+    belongs only to the full lap list's open row, a separate element in the export - the two
+    were conflated while building it.
+  - **Timers and Laps defaulted to collapsed.** The unsuffixed export (no collapse control at
+    all) reads as the base state; "compacted" is the second state its own chevron affordance
+    leads to - not the default to open on.
+  - Two things intentionally still deviate from a literal copy, both necessary to keep the
+    real feature working rather than a static picture of it: the collapse **toggle mechanism
+    itself** (reconciling two static screens into one working control), and the **Start
+    icon** for when a timer isn't running, which neither export ever depicts (both show the
+    timer running).

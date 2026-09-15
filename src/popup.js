@@ -61,8 +61,8 @@ let editingLapId = null;
 let isConfirmingDelete = false;
 /** Purely local UI state - the worker has no notion of whether these are open. */
 let settingsOpen = false;
-let timersExpanded = false;
-let lapsExpanded = false;
+let timersExpanded = true;
+let lapsExpanded = true;
 
 /** True while an inline name field is open; a background sync would destroy it. */
 const isEditing = () => Boolean(editingId || editingLapId);
@@ -391,19 +391,10 @@ function renderTabs() {
   }
 }
 
-/**
- * The label under the clock: the lap in progress, with "now" set apart the same way the
- * full lap list already does (this is the "less clear without it" side of that decision -
- * see renderLapsSummary for the collapsed one-line side).
- */
+/** The label under the clock: just the lap in progress by name - plain, no "· now" (that
+ * badge belongs only to the full lap list's open row, a different element). */
 function renderCurrentLap() {
-  const el = elements.currentLap;
-  el.textContent = "";
-  el.append(document.createTextNode(snapshot.currentLap.name + " "));
-  const now = document.createElement("span");
-  now.className = "now";
-  now.textContent = "· now";
-  el.append(now);
+  elements.currentLap.textContent = snapshot.currentLap.name;
 }
 
 /** @param {boolean} running */
@@ -427,7 +418,6 @@ function render() {
   renderCurrentLap();
   elements.dot.classList.toggle("dot--live", snapshot.running);
 
-  elements.toggle.classList.toggle("stop", snapshot.running);
   elements.toggle.setAttribute("aria-label", snapshot.running ? "Stop timer" : "Start timer");
   elements.toggle.title = snapshot.running ? "Stop timer" : "Start timer";
   setToggleIcon(snapshot.running);
