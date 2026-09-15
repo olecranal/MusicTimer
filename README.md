@@ -132,6 +132,7 @@ test/backfill.test.js    injecting into tabs that were already open at install/s
 docs/BEST_PRACTICES.md   the standards this code is written against
 docs/CONFORMANCE.md      those standards as checkable requirements + an audit log
 docs/design.md           the popup's visual design brief, for iterating in Google Stitch
+docs/KNOWN_BUGS.md       confirmed problems, not yet fixed
 BACKLOG.md               ideas raised but not built yet
 LICENSE                  MIT
 ```
