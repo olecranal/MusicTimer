@@ -16,6 +16,7 @@ const MAX_TIMER_NAME_LENGTH = 40;
 
 /* Looked up once: render() runs four times a second and these never move. */
 const elements = {
+  timerView: document.getElementById("timerView"),
   dot: document.getElementById("dot"),
   statusTitle: document.getElementById("statusTitle"),
   statusContext: document.getElementById("statusContext"),
@@ -23,7 +24,6 @@ const elements = {
   clock: document.getElementById("clock"),
   currentLap: document.getElementById("currentLap"),
   settingsToggle: /** @type {HTMLButtonElement} */ (document.getElementById("settingsToggle")),
-  settingsPanel: document.getElementById("settingsPanel"),
   lap: document.getElementById("lap"),
   toggle: document.getElementById("toggle"),
   toggleIcon: document.getElementById("toggleIcon"),
@@ -42,13 +42,13 @@ const elements = {
   laps: document.getElementById("laps"),
   addTimer: document.getElementById("addTimer"),
   deleteTimer: /** @type {HTMLButtonElement} */ (document.getElementById("deleteTimer")),
-  mode: document.getElementById("mode"),
-  modeHint: document.getElementById("modeHint"),
-  filterName: document.getElementById("filterName"),
-  filterSub: document.getElementById("filterSub"),
-  useCurrent: document.getElementById("useCurrent"),
-  clearFilter: document.getElementById("clearFilter"),
   tabs: document.getElementById("tabs"),
+  settingsView: document.getElementById("settingsView"),
+  settingsBack: document.getElementById("settingsBack"),
+  settingsSave: document.getElementById("settingsSave"),
+  modeOptions: document.getElementById("modeOptions"),
+  targetTimer: /** @type {HTMLSelectElement} */ (document.getElementById("targetTimer")),
+  filterOptions: document.getElementById("filterOptions"),
 };
 
 /** @type {PopupSnapshot | null} */
@@ -60,9 +60,23 @@ let editingId = null;
 let editingLapId = null;
 let isConfirmingDelete = false;
 /** Purely local UI state - the worker has no notion of whether these are open. */
-let settingsOpen = false;
 let timersExpanded = true;
 let lapsExpanded = true;
+
+/**
+ * The settings page's draft - null when the page is closed. Nothing here reaches
+ * background.js until Save sends it as one SAVE_TIMER_SETTINGS command; the back arrow
+ * just discards it. `baselineMode`/`baselineFilterMode` are what's actually saved right
+ * now, kept alongside the editable draft so the "Active" badge can show the real value even
+ * after you've moved the radio selection away from it.
+ * @type {{
+ *   id: string, name: string, timers: TimerOption[], candidate: PlaylistContext | null,
+ *   mode: TimerMode, filterMode: FilterMode, filter: PlaylistContext | null,
+ *   specificPlaylists: { raw: string }[],
+ *   baselineMode: TimerMode, baselineFilterMode: FilterMode,
+ * } | null}
+ */
+let settingsDraft = null;
 
 /** True while an inline name field is open; a background sync would destroy it. */
 const isEditing = () => Boolean(editingId || editingLapId);
@@ -97,8 +111,9 @@ function shortenPlaylistName(name) {
 /* ----------------------------------------------------------------- transport */
 
 /**
+ * @template [T=PopupSnapshot]
  * @param {{ type: string, [key: string]: any }} message
- * @returns {Promise<PopupSnapshot | undefined>}
+ * @returns {Promise<T | undefined>}
  */
 function send(message) {
   return new Promise((resolve) => chrome.runtime.sendMessage(message, resolve));
@@ -415,6 +430,7 @@ function setToggleIcon(running) {
 
 function render() {
   if (!snapshot) return;
+  if (elements.timerView.hidden) return; // nothing here is visible on the settings page
   const liveMs = snapshot.running ? Date.now() - lastSyncAt : 0;
 
   const status = statusParts();
@@ -444,24 +460,6 @@ function render() {
   elements.deleteTimer.title = isConfirmingDelete ? "Click again to confirm delete" : "Delete timer";
   elements.deleteTimer.disabled = snapshot.timers.length <= 1;
 
-  for (const button of elements.mode.querySelectorAll("button")) {
-    button.classList.toggle("on", button.dataset.mode === snapshot.mode);
-  }
-  elements.modeHint.textContent =
-    snapshot.mode === "auto"
-      ? "Runs while music plays, pauses the moment it stops."
-      : "Starts when music first plays. Keeps running until you press Stop.";
-
-  if (snapshot.filter) {
-    elements.filterName.textContent = snapshot.filter.name;
-    elements.filterSub.textContent = snapshot.filter.weak
-      ? "Detected from the page you had open — best effort on Spotify."
-      : snapshot.filter.siteLabel || "";
-  } else {
-    elements.filterName.textContent = "Any music counts";
-    elements.filterSub.textContent = "";
-  }
-
   renderTabs();
 }
 
@@ -482,19 +480,307 @@ async function sync(message = { type: MT.MESSAGE.GET }) {
   render();
 }
 
-/* ------------------------------------------------------------------- events */
+/* ---------------------------------------------------------------- settings page */
 
-/** Mode and playlist binding live behind the gear - settings you set once, not every visit. */
-function applySettingsOpen() {
-  elements.settingsPanel.hidden = !settingsOpen;
-  elements.settingsToggle.setAttribute("aria-expanded", String(settingsOpen));
+/**
+ * A pasted playlist link becomes a stable id the same way content.js's own adapters build
+ * one, so it matches a real playback report by id rather than only by name. Anything that
+ * isn't a recognized link is treated as a typed name instead - both are valid input.
+ * @param {string} raw
+ * @returns {PlaylistContext | null} null only for blank input
+ */
+function parsePlaylistLink(raw) {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  try {
+    const url = new URL(trimmed);
+    const host = url.hostname.replace(/^(www|m)\./, "");
+    const list = url.searchParams.get("list");
+
+    if (host === "music.youtube.com" && list) {
+      return { id: "ytmusic:" + list, name: null, url: trimmed, site: "ytmusic", siteLabel: "YouTube Music" };
+    }
+    if (host === "youtube.com" && list) {
+      return { id: "youtube:" + list, name: null, url: trimmed, site: "youtube", siteLabel: "YouTube" };
+    }
+    if (host === "open.spotify.com") {
+      const match = url.pathname.match(/^\/(playlist|album|artist|collection)\/([^/]+)/);
+      if (match) {
+        return {
+          id: "spotify:" + match[1] + "/" + match[2],
+          name: null,
+          url: trimmed,
+          site: "spotify",
+          siteLabel: "Spotify",
+        };
+      }
+    }
+    // A URL, but not one of the three sites (or missing the piece we need) - fall through
+    // and treat it as a typed name, same as any other text that isn't a link.
+  } catch {
+    // Not a URL at all - the expected case for a typed name.
+  }
+  return { id: null, name: trimmed };
 }
 
-elements.settingsToggle.addEventListener("click", () => {
-  settingsOpen = !settingsOpen;
-  applySettingsOpen();
+/**
+ * What to show in a "Specific playlist(s)" input for an entry that came back from
+ * background.js - whichever of these is the most recognizable to the person who typed it.
+ * @param {PlaylistContext} entry
+ * @returns {string}
+ */
+function displayTextFor(entry) {
+  return entry.url || entry.name || entry.id || "";
+}
+
+/** @returns {boolean} whether the settings page is the one currently on screen */
+const isOnSettingsPage = () => Boolean(settingsDraft);
+
+/**
+ * Fetches one timer's full settings and opens the page on them. Called both when the gear
+ * is first pressed and whenever the "Target timer" dropdown changes - either way, any
+ * unsaved edits to whatever was open before are discarded, the same as the back arrow does.
+ * @param {string} [id]
+ */
+async function openSettings(id) {
+  const data = /** @type {SettingsSnapshot | undefined} */ (await send({ type: MT.MESSAGE.SETTINGS, id }));
+  if (!data) {
+    log.warn("settings:no-response", { id: id ?? null });
+    return;
+  }
+  settingsDraft = {
+    ...data,
+    specificPlaylists: data.specificPlaylists.map((entry) => ({ raw: displayTextFor(entry) })),
+    baselineMode: data.mode,
+    baselineFilterMode: data.filterMode,
+  };
+  renderSettingsPage();
+  elements.timerView.hidden = true;
+  elements.settingsView.hidden = false;
+}
+
+/** Discards the draft and returns to the timer view, re-syncing it - it may be stale. */
+function closeSettings() {
+  settingsDraft = null;
+  elements.settingsView.hidden = true;
+  elements.timerView.hidden = false;
+  sync();
+}
+
+/**
+ * One radio-style card, shared by both settings-page option lists.
+ * @param {{ selected: boolean, title: string, description: string, badge?: string, onSelect: () => void }} spec
+ * @returns {HTMLButtonElement}
+ */
+function buildOptionCard({ selected, title, description, badge, onSelect }) {
+  const card = /** @type {HTMLButtonElement} */ (document.createElement("button"));
+  card.type = "button";
+  card.className = "option-card" + (selected ? " option-card--selected" : "");
+
+  const dot = document.createElement("span");
+  dot.className = "option-card__dot";
+
+  const body = document.createElement("span");
+  body.className = "option-card__body";
+
+  const row = document.createElement("span");
+  row.className = "option-card__row";
+  const titleEl = document.createElement("span");
+  titleEl.className = "option-card__title";
+  titleEl.textContent = title;
+  row.append(titleEl);
+  if (badge) {
+    const badgeEl = document.createElement("span");
+    badgeEl.className = "option-card__badge";
+    badgeEl.textContent = badge;
+    row.append(badgeEl);
+  }
+
+  const desc = document.createElement("p");
+  desc.className = "option-card__description";
+  desc.textContent = description;
+
+  body.append(row, desc);
+  card.append(dot, body);
+  card.addEventListener("click", onSelect);
+  return card;
+}
+
+function renderModeOptions() {
+  const box = elements.modeOptions;
+  box.innerHTML = "";
+  const draft = settingsDraft;
+
+  box.append(
+    buildOptionCard({
+      selected: draft.mode === "auto",
+      title: "Follow the music",
+      description: "Pauses the timer as soon as music stops or the tab pauses.",
+      badge: draft.baselineMode === "auto" ? "Active" : undefined,
+      onSelect: () => {
+        draft.mode = "auto";
+        renderModeOptions();
+      },
+    }),
+    buildOptionCard({
+      selected: draft.mode === "sticky",
+      title: "Only when I say",
+      description: "Timer keeps ticking continuously until stopped manually.",
+      badge: draft.baselineMode === "sticky" ? "Active" : undefined,
+      onSelect: () => {
+        draft.mode = "sticky";
+        renderModeOptions();
+      },
+    })
+  );
+}
+
+/** @param {number} index */
+function removeSpecificEntry(index) {
+  settingsDraft.specificPlaylists.splice(index, 1);
+  renderFilterOptions();
+}
+
+/**
+ * The "Specific playlist(s)" card's own body: one input per entry (each with a remove
+ * button) and, revealed on hover over the card, a "+" to add another. Rendered whenever
+ * this card exists, not only while it's selected - matching the reference mockup, which
+ * shows this field regardless of which option is currently chosen.
+ * @returns {HTMLElement}
+ */
+function buildSpecificPlaylistsBody() {
+  const wrap = document.createElement("span");
+  wrap.className = "playlist-entries";
+
+  settingsDraft.specificPlaylists.forEach((entry, index) => {
+    const row = document.createElement("span");
+    row.className = "playlist-entry";
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.value = entry.raw;
+    input.placeholder = "Paste a playlist link, or type its name";
+    input.addEventListener("click", (event) => event.stopPropagation()); // don't also select the card
+    input.addEventListener("input", () => {
+      entry.raw = input.value;
+    });
+
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.className = "playlist-entry__remove";
+    remove.setAttribute("aria-label", "Remove this playlist");
+    remove.title = "Remove this playlist";
+    remove.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>';
+    remove.addEventListener("click", (event) => {
+      event.stopPropagation();
+      removeSpecificEntry(index);
+    });
+
+    row.append(input, remove);
+    wrap.append(row);
+  });
+
+  const add = document.createElement("button");
+  add.type = "button";
+  add.className = "playlist-add";
+  add.setAttribute("aria-label", "Add another playlist");
+  add.title = "Add another playlist";
+  add.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>';
+  add.addEventListener("click", (event) => {
+    event.stopPropagation();
+    settingsDraft.specificPlaylists.push({ raw: "" });
+    renderFilterOptions();
+  });
+  wrap.append(add);
+
+  return wrap;
+}
+
+function renderFilterOptions() {
+  const box = elements.filterOptions;
+  box.innerHTML = "";
+  const draft = settingsDraft;
+
+  const useCurrentCard = buildOptionCard({
+    selected: draft.filterMode === "current",
+    title: "Use current",
+    description: "Locked to the currently active album or playlist.",
+    badge: draft.filter?.name || undefined,
+    onSelect: () => {
+      draft.filterMode = "current";
+      // Selecting this is the capture moment, same as the old "Use current" button - lock
+      // to whatever is playing right now, if anything is.
+      if (draft.candidate) draft.filter = { ...draft.candidate };
+      renderFilterOptions();
+    },
+  });
+
+  const anyMusicCard = buildOptionCard({
+    selected: draft.filterMode === "any",
+    title: "Any music",
+    description: "Responds to playback across YouTube, YT Music & Spotify.",
+    onSelect: () => {
+      draft.filterMode = "any";
+      renderFilterOptions();
+    },
+  });
+
+  const specificCard = buildOptionCard({
+    selected: draft.filterMode === "specific",
+    title: "Specific playlist(s)",
+    description: "Ticks when any one of these is playing.",
+    onSelect: () => {
+      // First time in: seed one entry so there's something to type into right away,
+      // rather than an empty list with only the hover-revealed "+" to discover.
+      if (draft.specificPlaylists.length === 0) {
+        const seed = draft.baselineFilterMode === "current" && draft.filter ? draft.filter.name : "";
+        draft.specificPlaylists.push({ raw: seed || "" });
+      }
+      draft.filterMode = "specific";
+      renderFilterOptions();
+    },
+  });
+  specificCard.querySelector(".option-card__body").append(buildSpecificPlaylistsBody());
+
+  box.append(useCurrentCard, anyMusicCard, specificCard);
+}
+
+function renderSettingsPage() {
+  const draft = settingsDraft;
+
+  elements.targetTimer.innerHTML = "";
+  for (const option of draft.timers) {
+    const el = document.createElement("option");
+    el.value = option.id;
+    el.textContent = option.name;
+    if (option.id === draft.id) el.selected = true;
+    elements.targetTimer.append(el);
+  }
+
+  renderModeOptions();
+  renderFilterOptions();
+}
+
+elements.settingsToggle.addEventListener("click", () => openSettings());
+elements.settingsBack.addEventListener("click", () => closeSettings());
+elements.targetTimer.addEventListener("change", () => openSettings(elements.targetTimer.value));
+
+elements.settingsSave.addEventListener("click", async () => {
+  const draft = settingsDraft;
+  const specificPlaylists = draft.specificPlaylists
+    .map((entry) => parsePlaylistLink(entry.raw))
+    .filter((entry) => entry !== null);
+
+  await command(MT.ACTION.SAVE_TIMER_SETTINGS, {
+    id: draft.id,
+    mode: draft.mode,
+    filterMode: draft.filterMode,
+    filter: draft.filter,
+    specificPlaylists,
+  });
+  closeSettings();
 });
-applySettingsOpen();
 
 /**
  * Also local-only: collapsing Timers/Laps to one summary line is a display choice, not
@@ -548,26 +834,11 @@ elements.deleteTimer.addEventListener("click", () => {
   command(MT.ACTION.DELETE_TIMER, { id: snapshot.activeId });
 });
 
-elements.mode.addEventListener("click", (event) => {
-  const mode = /** @type {HTMLElement} */ (event.target).dataset?.mode;
-  if (mode) command(MT.ACTION.SET_MODE, { mode });
-});
-
-elements.useCurrent.addEventListener("click", () => {
-  const candidate = snapshot?.candidate;
-  if (!candidate) {
-    log.info("filter:no-candidate", { tabs: snapshot?.tabs.length ?? 0 });
-    elements.statusTitle.textContent = "No playlist detected yet — start playing one first.";
-    elements.statusContext.textContent = "";
-    return;
-  }
-  command(MT.ACTION.SET_FILTER, { filter: candidate });
-});
-
-elements.clearFilter.addEventListener("click", () => command(MT.ACTION.CLEAR_FILTER));
-
 setInterval(render, LOCAL_TICK_MS);
 setInterval(() => {
-  if (!isEditing()) sync(); // a background sync would blow away an open rename field
+  // A background sync would blow away an open rename field, and there is nothing for it
+  // to refresh while the settings page - a separate draft, not part of this snapshot - is
+  // what's actually on screen.
+  if (!isEditing() && !isOnSettingsPage()) sync();
 }, SYNC_INTERVAL_MS);
 sync();

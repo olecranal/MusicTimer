@@ -33,17 +33,26 @@ manual refresh needed. See *Reaching tabs that were already open* below.
 **2. Only when I say.** The timer starts on its own the first time music plays, then keeps
 running through pauses, track changes and silence until you press **Stop**. After you stop,
 it will not restart while the same music is still going — it re-arms only once playback has
-actually stopped and started again. Switch modes under the **⚙ Settings** panel.
+actually stopped and started again. Switch modes on the **⚙ Settings** page.
 
 **3. Several timers.** Keep `Work` and `Gaming` apart so each tracks its own total.
 Every timer carries its own clock, mode and playlist binding. Only the active one counts —
-pick it in the **Timers** list, or let it pick itself (below). Use **+ New**, **Rename** and
-**Delete** to manage the list; the last timer cannot be deleted.
+pick it in the **Timers** list, or let it pick itself (below). Use the **+** and trash icons
+beside the Timers heading to add or remove one; double-click a timer's name to rename it.
+The last timer cannot be deleted.
 
-**4. Count only one playlist.** In the **⚙ Settings** panel, play the playlist you care about
-and press **Use current**. From then on only that playlist moves the clock; anything else is
-ignored (the popup says so: *"Music is playing, but not from …"*). Press **Any music** to
-clear it.
+**4. Count only one playlist — or several.** On the **⚙ Settings** page, pick a **Target
+timer** (any timer, not just the one you're currently viewing), then choose how it decides
+what counts:
+- **Use current** — locks to whatever's playing when you pick it
+- **Any music** — no filter
+- **Specific playlist(s)** — an explicit list; the timer counts if *any one* of them is
+  playing. Type a name or paste a playlist link (YouTube Music, YouTube, or Spotify — a
+  link is parsed into the same stable id the content script itself uses), and add more with
+  the **+** that appears when you hover the option.
+
+Nothing here takes effect until you press **Save** — the page is a draft; the back arrow
+discards it.
 
 **5. Laps.** **Lap** splits the active timer the way a stopwatch does: it closes the
 stretch you were in and opens the next one, leaving the running total alone. Each lap is
@@ -61,8 +70,9 @@ The primary button is **Lap**, because in "Follow the music" mode starting and s
 the music's job. **Stop** is still there as a manual override, which is what makes "Only
 when I say" mode work at all.
 
-The badge on the toolbar icon shows elapsed minutes, green while the clock runs. The popup
-also shows a running total for the day, for the active timer.
+The badge on the toolbar icon shows elapsed minutes, green while the clock runs. (A daily
+total is still tracked internally - `background.js`'s `daily`/`todayMs` - just not currently
+shown anywhere in the popup.)
 
 ## Playlist detection, by site
 
@@ -129,6 +139,7 @@ test/migration.test.js   upgrading from older stored layouts
 test/laps.test.js        lap splitting, naming, isolation and reset
 test/playback.test.js    playback detection, including the burst-of-calls regression
 test/backfill.test.js    injecting into tabs that were already open at install/startup
+test/settings.test.js    the settings page: multi-playlist OR-matching, any-timer targeting
 docs/BEST_PRACTICES.md   the standards this code is written against
 docs/CONFORMANCE.md      those standards as checkable requirements + an audit log
 .claude/skills/conform/  /conform: the procedure for auditing against CONFORMANCE.md
@@ -166,7 +177,7 @@ the same config, so the errors appear as you type.
 ## Tests
 
 ```bash
-node test/background.test.js && node test/migration.test.js && node test/laps.test.js && node test/playback.test.js && node test/backfill.test.js
+node test/background.test.js && node test/migration.test.js && node test/laps.test.js && node test/playback.test.js && node test/backfill.test.js && node test/settings.test.js
 ```
 
 Runs the real `background.js` against a stubbed `chrome` API and a fake clock, covering

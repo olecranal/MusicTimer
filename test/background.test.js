@@ -36,7 +36,7 @@ const secs = (s) => Math.round(s.elapsedMs / 1000);
 
   console.log("\n--- reset + sticky mode ---");
   await cmd("reset");
-  await cmd("setMode", { mode: "sticky" });
+  await cmd("saveTimerSettings", { mode: "sticky", filterMode: "any", filter: null, specificPlaylists: [] });
   s = await get();
   check("reset to zero", secs(s), 0);
   check("mode is sticky", s.mode, "sticky");
@@ -69,14 +69,14 @@ const secs = (s) => Math.round(s.elapsedMs / 1000);
   check("re-arms after real silence", secs(s), 27);
 
   console.log("\n--- playlist filter ---");
-  await cmd("setMode", { mode: "auto" });
+  await cmd("saveTimerSettings", { mode: "auto", filterMode: "any", filter: null, specificPlaylists: [] });
   await cmd("reset");
   const focus = { id: "ytmusic:PL_focus", name: "Focus", site: "ytmusic" };
   const other = { id: "ytmusic:PL_other", name: "Party", site: "ytmusic" };
   await report(3, { playing: true, context: focus });
   s = await get();
   check("candidate offered", s.candidate.id, "ytmusic:PL_focus");
-  await cmd("setFilter", { filter: focus });
+  await cmd("saveTimerSettings", { mode: "auto", filterMode: "current", filter: focus, specificPlaylists: [] });
 
   advance(8000);
   await report(3, { playing: true, context: focus });
@@ -96,7 +96,7 @@ const secs = (s) => Math.round(s.elapsedMs / 1000);
   s = await get();
   check("resumes on the chosen playlist", secs(s), 10);
 
-  await cmd("clearFilter");
+  await cmd("saveTimerSettings", { mode: "auto", filterMode: "any", filter: null, specificPlaylists: [] });
   await report(3, { playing: true, context: other });
   advance(5000);
   await report(3, { playing: true, context: other });
@@ -127,9 +127,9 @@ const secs = (s) => Math.round(s.elapsedMs / 1000);
   await report(4, { playing: false });
   await cmd("renameTimer", { name: "Work" });
   await cmd("reset");
-  await cmd("setFilter", { filter: work });
+  await cmd("saveTimerSettings", { mode: "auto", filterMode: "current", filter: work, specificPlaylists: [] });
   await cmd("addTimer", { name: "Gaming" });
-  await cmd("setFilter", { filter: game });
+  await cmd("saveTimerSettings", { mode: "auto", filterMode: "current", filter: game, specificPlaylists: [] });
   s = await get();
   check("two timers exist", s.timers.map((t) => t.name), ["Work", "Gaming"]);
   check("the new timer is active", s.name, "Gaming");
@@ -170,7 +170,9 @@ const secs = (s) => Math.round(s.elapsedMs / 1000);
   check("work resumes on its own total", secs(s), 11);
 
   console.log("\n--- per-timer settings ---");
-  await cmd("setMode", { mode: "sticky" });
+  // Saving the form re-sends its whole draft, filter included - this is what proves a
+  // mode-only edit doesn't silently wipe the playlist binding loaded alongside it.
+  await cmd("saveTimerSettings", { mode: "sticky", filterMode: "current", filter: work, specificPlaylists: [] });
   await cmd("selectTimer", { id: byName(s, "Gaming").id });
   s = await get();
   check("gaming kept its own mode", s.mode, "auto");

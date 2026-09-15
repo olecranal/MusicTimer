@@ -9,6 +9,9 @@
 /** What a timer's clock does when music stops. */
 type TimerMode = "auto" | "sticky";
 
+/** Which of a timer's three playlist-matching rules is in effect. */
+type FilterMode = "current" | "any" | "specific";
+
 /** Where the music is playing from - a playlist, album, or page context. */
 interface PlaylistContext {
   /** Stable-ish identifier, namespaced by site, e.g. "ytmusic:PL123". */
@@ -53,8 +56,12 @@ interface Timer {
   id: string;
   name: string;
   mode: TimerMode;
-  /** null means any music counts. */
+  /** Which of filter / (none) / specificPlaylists actually governs matching. */
+  filterMode: FilterMode;
+  /** The "Use current" capture. Only meaningful when filterMode is "current". */
   filter: PlaylistContext | null;
+  /** Explicit list for "specific" mode - matches if any one entry is playing. */
+  specificPlaylists: PlaylistContext[];
   running: boolean;
   /** Epoch ms the current run began, or null when stopped. */
   runningSince: number | null;
@@ -158,4 +165,29 @@ interface CommandMessage {
   name?: string;
   mode?: TimerMode;
   filter?: PlaylistContext | null;
+  filterMode?: FilterMode;
+  specificPlaylists?: PlaylistContext[];
+}
+
+/** One entry in the settings page's "Target timer" dropdown. */
+interface TimerOption {
+  id: string;
+  name: string;
+}
+
+/**
+ * Everything the settings page needs for one timer, in one round trip. Unlike
+ * PopupSnapshot, this can describe any timer, not only the active one - the page lets you
+ * configure one without switching to it.
+ */
+interface SettingsSnapshot {
+  timers: TimerOption[];
+  id: string;
+  name: string;
+  mode: TimerMode;
+  filterMode: FilterMode;
+  filter: PlaylistContext | null;
+  specificPlaylists: PlaylistContext[];
+  /** What's playing right now, offered as the "Use current" capture target. */
+  candidate: PlaylistContext | null;
 }

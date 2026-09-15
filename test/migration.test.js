@@ -72,5 +72,57 @@ const V1 = {
   check("lapping a pre-lap timer banks the time it already had", Math.round(older.laps[0].durationMs / 60000), 90);
   check("named from its timer", older.laps[0].name, "Work - lap 1");
 
+  console.log("\n--- upgrading from before the settings page (no filterMode/specificPlaylists) ---");
+  const PRE_SETTINGS_PAGE = {
+    "mt.state": {
+      version: 2,
+      activeId: "t1",
+      order: ["t1", "t2"],
+      timers: {
+        // Had a captured "Use current" filter - the old null-vs-object encoding.
+        t1: {
+          id: "t1",
+          name: "Bound",
+          mode: "auto",
+          filter: { id: "ytmusic:PL1", name: "Focus" },
+          running: false,
+          runningSince: null,
+          accumulatedMs: 0,
+          armed: false,
+          rearmBlocked: false,
+          daily: {},
+          lastActive: null,
+          laps: [],
+          lapStartMs: 0,
+        },
+        // Never had a filter at all.
+        t2: {
+          id: "t2",
+          name: "Unbound",
+          mode: "auto",
+          filter: null,
+          running: false,
+          runningSince: null,
+          accumulatedMs: 0,
+          armed: false,
+          rearmBlocked: false,
+          daily: {},
+          lastActive: null,
+          laps: [],
+          lapStartMs: 0,
+        },
+      },
+    },
+  };
+
+  const preSettings = createWorker({ seedLocal: PRE_SETTINGS_PAGE });
+  const bound = await preSettings.settings("t1");
+  check("a timer with a captured filter infers CURRENT mode", bound.filterMode, "current");
+  check("and keeps that filter", bound.filter.name, "Focus");
+  check("gains an empty specific-playlists list", bound.specificPlaylists.length, 0);
+
+  const unbound = await preSettings.settings("t2");
+  check("a timer with no filter infers ANY mode", unbound.filterMode, "any");
+
   finish();
 })();

@@ -90,6 +90,7 @@ function createWorker({ seedLocal = {}, now = 1700000000000, manifest = {}, open
         { tab: { id: tabId } }
       ),
     get: () => msg({ type: "mt:get" }),
+    settings: (id) => msg({ type: "mt:settings", id }),
     cmd: (action, extra = {}) => msg({ type: "mt:command", action, ...extra }),
     advance: (ms) => { NOW += ms; },
     closeTab: (id) => listeners.removed[0](id),

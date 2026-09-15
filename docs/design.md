@@ -168,3 +168,48 @@ Never lorem ipsum — this is what real usage actually looks like:
   Verified: tsc --noEmit clean, all 5 suites pass, and drove the actual double-click-to-
   rename, the delete arm/confirm cycle, and the header icons disappearing behind the summary
   on collapse, in a real render.
+
+- **2026-09-17 — v5, a dedicated Settings page.** Jason brought a third export
+  ([`stitch/settings_page/code.html`](stitch/settings_page/code.html)) showing settings as
+  their own page - a back arrow, a Save button, and a materially bigger feature set than the
+  inline panel it replaces. Four real product decisions came out of this before any code:
+
+  1. **Same popup, not a real Chrome options page.** One `popup.html` now holds two views,
+     `#timerView` and `#settingsView`, toggled by hiding one and showing the other - no
+     manifest change, no second document.
+  2. **Settings are a real staged draft.** Nothing reaches `background.js` until Save sends
+     one `SAVE_TIMER_SETTINGS` command for the whole form at once; the back arrow discards
+     the draft outright. This replaced `SET_MODE`/`SET_FILTER`/`CLEAR_FILTER` entirely -
+     three commands that each applied instantly are now one that applies everything
+     together, on Save.
+  3. **A "Target timer" dropdown configures any timer, not only the active one.** Every
+     command already accepted an optional timer id; the settings page is the first thing
+     that actually uses it for something other than the currently active timer. Switching
+     the dropdown reloads the draft from that timer's real saved settings, discarding any
+     unsaved edits - the same as the back arrow does.
+  4. **"Specific playlist(s)" grew into a real fourth filter mode**, `specific` - a whole new
+     way for a timer to decide what counts, alongside `current` and `any`. It holds a list,
+     matches if **any one** of them is playing (Jason: "if any playlist that had been
+     explicitly stated plays, the timer follows any of those playlists"), accepts either a
+     typed name or a pasted playlist link (parsed into the same `site:id` scheme
+     `content.js`'s own adapters use - e.g. a Spotify playlist link becomes
+     `spotify:playlist/<id>`), and a hover-revealed "+" at the bottom of its card adds more
+     entries. The first entry pre-fills from whatever "Use current" was bound to, or starts
+     empty with guidance text if "Any music" was in effect - a Jason-specified default,
+     not inferred.
+
+  Two smaller, self-decided pieces: an "Active" badge on the mode cards shows which one is
+  really in effect right now (the loaded baseline), separate from the green border tracking
+  the live draft selection - useful precisely because a draft can now disagree with what's
+  saved. And the confirm-before-deleting question doesn't arise here; nothing on this page
+  deletes anything.
+
+  Verified: `tsc --noEmit` clean; new coverage in `test/settings.test.js` (OR-matching
+  across several specific playlists, a timer auto-claiming under `specific` mode exactly
+  like it already did under `current`, the settings dropdown listing every timer, an
+  out-of-range save clamped to 10 entries) plus a migration case in `test/migration.test.js`
+  for timers stored before `filterMode`/`specificPlaylists` existed; all 6 suites pass. Drove
+  the real page in a browser: mode/filter selection, the "Active" badge staying on the
+  baseline through an unsaved change, add/remove on the specific-playlist list, a pasted
+  Spotify link parsed correctly end to end through a real save, the target-timer dropdown
+  discarding an unsaved edit on switch, and the back arrow discarding one on exit.

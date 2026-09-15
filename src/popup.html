@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="popup.css" />
   </head>
   <body>
+    <div id="timerView">
     <header>
       <span class="dot" id="dot"></span>
       <div class="now-playing">
@@ -16,8 +17,6 @@
         id="settingsToggle"
         class="icon-button"
         type="button"
-        aria-expanded="false"
-        aria-controls="settingsPanel"
         aria-label="Settings"
         title="Settings"
       >⚙</button>
@@ -76,31 +75,62 @@
       </div>
     </section>
 
-    <div id="settingsPanel" hidden>
-      <section>
-        <h2>When the timer stops</h2>
-        <div class="mode-switch" id="mode">
-          <button data-mode="auto" class="on">Follow the music</button>
-          <button data-mode="sticky">Only when I say</button>
-        </div>
-        <p class="hint" id="modeHint">Runs while music plays, pauses the moment it stops.</p>
-      </section>
-
-      <section>
-        <h2>Count only one playlist</h2>
-        <div class="filter" id="filter">
-          <div class="filter__name" id="filterName">Any music counts</div>
-          <div class="filter__source" id="filterSub"></div>
-        </div>
-        <div class="row">
-          <button id="useCurrent">Use current</button>
-          <button id="clearFilter" class="ghost">Any music</button>
-        </div>
-        <p class="hint">A timer bound to a playlist takes over automatically when that playlist plays.</p>
-      </section>
+    <footer id="tabs"></footer>
     </div>
 
-    <footer id="tabs"></footer>
+    <div id="settingsView" hidden>
+      <header class="settings-header">
+        <div class="settings-header__left">
+          <button id="settingsBack" class="icon-button" type="button" aria-label="Back to timer" title="Back to timer">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path>
+            </svg>
+          </button>
+          <div class="settings-header__titles">
+            <h1>Settings</h1>
+            <span>Playback &amp; Tracking Rules</span>
+          </div>
+        </div>
+        <button id="settingsSave" class="settings-save" type="button">Save</button>
+      </header>
+
+      <div class="settings-section">
+        <div class="settings-section__heading">
+          <h2>When music stops</h2>
+          <span class="settings-section__tag">Auto-pause</span>
+        </div>
+        <div class="option-list" id="modeOptions"></div>
+      </div>
+
+      <div class="wood-slat-divider"></div>
+
+      <div class="settings-section">
+        <div class="settings-section__heading">
+          <h2>What the timer follows</h2>
+          <span class="settings-section__tag">Source match</span>
+        </div>
+
+        <div class="target-timer-row">
+          <span>Target timer</span>
+          <div class="select-wrap">
+            <select id="targetTimer" aria-label="Target timer"></select>
+            <svg class="select-wrap__chevron" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+            </svg>
+          </div>
+        </div>
+
+        <div class="option-list" id="filterOptions"></div>
+      </div>
+
+      <div class="info-box">
+        <div class="info-box__title">
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"></path></svg>
+          <span>Supported players</span>
+        </div>
+        <p>Supports YouTube Music, Spotify Web, and standard YouTube video tabs automatically.</p>
+      </div>
+    </div>
 
     <script src="shared/logger.js"></script>
     <script src="shared/contract.js"></script>

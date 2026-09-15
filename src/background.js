@@ -31,7 +31,9 @@ const newTimer = (name) => ({
   id: "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
   name,
   mode: "auto", // "auto" = follows playback | "sticky" = starts on music, stops only by hand
-  filter: null, // null = any music counts | { id, name, site, weak }
+  filterMode: MT.FILTER_MODE.ANY,
+  filter: null, // the "Use current" capture; only meaningful when filterMode is CURRENT
+  specificPlaylists: [], // only meaningful when filterMode is SPECIFIC
   running: false,
   runningSince: null,
   accumulatedMs: 0,
@@ -44,6 +46,7 @@ const newTimer = (name) => ({
 });
 
 const MAX_NAME_LENGTH = 40;
+const MAX_SPECIFIC_PLAYLISTS = 10; // a sane cap on the settings page's "+"-added list
 
 /** Laps are offsets into elapsed time, so they survive pauses and never depend on wall clock. */
 const lapDefaultName = (timer) => `${timer.name} - lap ${timer.laps.length + 1}`;
@@ -92,6 +95,13 @@ function normalize(raw) {
     const timer = state.timers[id];
     if (!Array.isArray(timer.laps)) timer.laps = [];
     if (typeof timer.lapStartMs !== "number") timer.lapStartMs = 0;
+    // Timers stored before the settings page shipped have a `filter` but no `filterMode` -
+    // infer it from whether a filter was ever captured, the same distinction the old
+    // null-vs-object encoding already made.
+    if (timer.filterMode !== MT.FILTER_MODE.CURRENT && timer.filterMode !== MT.FILTER_MODE.SPECIFIC) {
+      timer.filterMode = timer.filter ? MT.FILTER_MODE.CURRENT : MT.FILTER_MODE.ANY;
+    }
+    if (!Array.isArray(timer.specificPlaylists)) timer.specificPlaylists = [];
   }
   state.version = 2;
   return state;
@@ -175,13 +185,41 @@ function matchesFilter(filter, context) {
 }
 
 /**
+ * Whether a timer accepts a given context, under whichever of its three filter modes is
+ * in effect. "Specific" matches if any one of its entries does - the whole point of that
+ * mode is following several playlists as one group.
+ * @param {Timer} timer
+ * @param {PlaylistContext | null} context
+ * @returns {boolean}
+ */
+function timerMatches(timer, context) {
+  if (timer.filterMode === MT.FILTER_MODE.CURRENT) return matchesFilter(timer.filter, context);
+  if (timer.filterMode === MT.FILTER_MODE.SPECIFIC) {
+    return timer.specificPlaylists.some((entry) => matchesFilter(entry, context));
+  }
+  return true; // ANY
+}
+
+/**
+ * Whether a timer is bound to anything at all - used to decide if it can auto-claim the
+ * active slot. A timer with no binding (ANY mode) never claims; see claimActive().
+ * @param {Timer} timer
+ * @returns {boolean}
+ */
+function hasBinding(timer) {
+  if (timer.filterMode === MT.FILTER_MODE.CURRENT) return Boolean(timer.filter);
+  if (timer.filterMode === MT.FILTER_MODE.SPECIFIC) return timer.specificPlaylists.length > 0;
+  return false;
+}
+
+/**
  * The first playing source that a timer's filter accepts, if any.
  * @param {Timer} timer
  * @param {PlaybackSource[]} playing
  * @returns {PlaybackSource | null}
  */
 function matchFor(timer, playing) {
-  return playing.find((s) => matchesFilter(timer.filter, s.context)) || null;
+  return playing.find((s) => timerMatches(timer, s.context)) || null;
 }
 
 /**
@@ -202,7 +240,7 @@ function claimActive(state, playing) {
 
   for (const id of state.order) {
     const timer = state.timers[id];
-    if (!timer.filter) continue; // unbound timers never claim
+    if (!hasBinding(timer)) continue; // unbound timers never claim
     const match = matchFor(timer, playing);
     if (!match) continue;
     const contextId = match.context?.id || null;
@@ -334,7 +372,7 @@ function setActive(state, id, playing) {
   // undo this choice; it will claim again once that playlist stops and restarts.
   const claimant = state.order
     .map((tid) => state.timers[tid])
-    .find((t) => t.filter && matchFor(t, playing));
+    .find((t) => hasBinding(t) && matchFor(t, playing));
   state.lastClaim = claimant ? { timerId: id, contextId: matchFor(claimant, playing).context?.id || null } : null;
 }
 
@@ -402,29 +440,40 @@ async function command(msg) {
       break;
     }
 
-    case MT.ACTION.SET_MODE:
+    case MT.ACTION.SAVE_TIMER_SETTINGS: {
+      // One write for the whole settings-page form, for whichever timer the "Target
+      // timer" dropdown named - not necessarily the active one. The page is a staged
+      // draft; nothing here takes effect until this one message arrives.
+      const target = state.timers[msg.id] || timer;
       if (msg.mode === "auto" || msg.mode === "sticky") {
-        timer.mode = msg.mode;
+        target.mode = msg.mode;
         if (msg.mode === "auto") {
-          timer.armed = false;
-          timer.rearmBlocked = false;
-        } else if (timer.running) {
-          timer.armed = true; // keep a running clock running across the switch
+          target.armed = false;
+          target.rearmBlocked = false;
+        } else if (target.running) {
+          target.armed = true; // keep a running clock running across the switch
         }
       } else {
         log.warn("command:bad-mode", { mode: msg.mode });
       }
-      break;
 
-    case MT.ACTION.SET_FILTER:
-      timer.filter = msg.filter || null;
+      target.filterMode =
+        msg.filterMode === MT.FILTER_MODE.CURRENT || msg.filterMode === MT.FILTER_MODE.SPECIFIC
+          ? msg.filterMode
+          : MT.FILTER_MODE.ANY;
+      target.filter = msg.filter || null;
+      target.specificPlaylists = Array.isArray(msg.specificPlaylists)
+        ? msg.specificPlaylists.slice(0, MAX_SPECIFIC_PLAYLISTS)
+        : [];
       state.lastClaim = null; // let the new binding take effect immediately
-      log.info("filter:set", { timerId: timer.id, filter: timer.filter?.name || null });
+      log.info("settings:saved", {
+        timerId: target.id,
+        mode: target.mode,
+        filterMode: target.filterMode,
+        specificCount: target.specificPlaylists.length,
+      });
       break;
-
-    case MT.ACTION.CLEAR_FILTER:
-      timer.filter = null;
-      break;
+    }
 
     case MT.ACTION.SELECT_TIMER:
       setActive(state, msg.id, playing);
@@ -486,6 +535,46 @@ async function candidateContext() {
 }
 
 /**
+ * The short label the timer list shows next to a timer's name - what it's bound to, in
+ * whichever mode is in effect. Null (no badge at all) for ANY mode, which is the common case.
+ * @param {Timer} timer
+ * @returns {string | null}
+ */
+function filterSummary(timer) {
+  if (timer.filterMode === MT.FILTER_MODE.CURRENT) return timer.filter?.name || null;
+  if (timer.filterMode === MT.FILTER_MODE.SPECIFIC) {
+    const [first, ...rest] = timer.specificPlaylists;
+    if (!first) return null;
+    const firstName = first.name || "1 playlist";
+    return rest.length ? `${firstName} +${rest.length}` : firstName;
+  }
+  return null;
+}
+
+/**
+ * Everything the settings page needs for one timer - unlike snapshotForPopup(), this can
+ * describe any timer, not only the active one, since the page lets you configure one
+ * without switching to it first.
+ * @param {string} [requestedId]
+ * @returns {Promise<SettingsSnapshot>}
+ */
+async function settingsForTimer(requestedId) {
+  const state = await getState();
+  const id = requestedId && state.timers[requestedId] ? requestedId : state.activeId;
+  const timer = state.timers[id];
+  return {
+    timers: state.order.map((tid) => ({ id: tid, name: state.timers[tid].name })),
+    id,
+    name: timer.name,
+    mode: timer.mode,
+    filterMode: timer.filterMode,
+    filter: timer.filter,
+    specificPlaylists: timer.specificPlaylists,
+    candidate: await candidateContext(),
+  };
+}
+
+/**
  * Everything the popup needs, in one round trip.
  * @returns {Promise<PopupSnapshot>}
  */
@@ -502,7 +591,7 @@ async function snapshotForPopup() {
         name: t.name,
         elapsedMs: elapsedMs(t),
         running: t.running,
-        filterName: t.filter?.name || null,
+        filterName: filterSummary(t),
       };
     }),
     name: timer.name,
@@ -550,6 +639,11 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
   if (msg?.type === MT.MESSAGE.GET) {
     snapshotForPopup().then(sendResponse);
+    return true;
+  }
+
+  if (msg?.type === MT.MESSAGE.SETTINGS) {
+    settingsForTimer(msg.id).then(sendResponse);
     return true;
   }
 

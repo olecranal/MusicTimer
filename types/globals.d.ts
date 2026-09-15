@@ -32,20 +32,25 @@ interface MtContract {
     GET: string;
     /** popup -> worker, mutate then snapshot */
     COMMAND: string;
+    /** popup -> worker, fetch one timer's full editable settings */
+    SETTINGS: string;
   };
   ACTION: {
     START: string;
     STOP: string;
     RESET: string;
-    SET_MODE: string;
-    SET_FILTER: string;
-    CLEAR_FILTER: string;
     SELECT_TIMER: string;
     ADD_TIMER: string;
     RENAME_TIMER: string;
     DELETE_TIMER: string;
     LAP: string;
     RENAME_LAP: string;
+    SAVE_TIMER_SETTINGS: string;
+  };
+  FILTER_MODE: {
+    CURRENT: FilterMode;
+    ANY: FilterMode;
+    SPECIFIC: FilterMode;
   };
 }
 

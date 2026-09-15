@@ -1,0 +1,107 @@
+<!DOCTYPE html><html lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Music Timer - Stardew Rustic Theme</title>
+<!-- Tailwind CSS v3 CDN with plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration -->
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bark: {
+              950: '#150D0B',
+              900: '#1D1210',
+              850: '#231612',
+              800: '#2A1A16',
+              750: '#34221D',
+              700: '#3E2922',
+              600: '#4E342B',
+              500: '#634438',
+              400: '#855E50',
+            },
+            parchment: {
+              100: '#FAF6EF',
+              200: '#F4EDE2',
+              300: '#E7DCB',
+              400: '#D5C4AF',
+              500: '#BFAF99',
+              600: '#94836F',
+            },
+            foliage: {
+              300: '#8BC34A',
+              400: '#72B558',
+              500: '#5F8D4E',
+              600: '#4D753E',
+              700: '#3D5E31',
+              800: '#2D4524',
+            }
+          },
+          fontFamily: {
+            sans: ['Segoe UI', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['ui-monospace', 'SFMono-Regular', 'Menlo', 'Consolas', 'monospace']
+          },
+          boxShadow: {
+            'wood-tile': '0 2px 0 0 #180F0D, inset 0 1px 0 0 rgba(255, 230, 200, 0.12)',
+            'wood-inset': 'inset 0 1px 3px 0 rgba(0, 0, 0, 0.5), 0 1px 0 0 rgba(255, 255, 255, 0.04)',
+            'foliage-tile': '0 2px 0 0 #283F20, inset 0 1px 0 0 rgba(255, 255, 255, 0.25)',
+          }
+        }
+      }
+    }
+  </script>
+<!-- BEGIN: Custom Rustic Wood Styling -->
+<style data-purpose="rustic-textures-and-accents">
+    /* Subtle natural grain and beveled edges */
+    .rustic-border {
+      border: 1px solid #473128;
+    }
+    .rustic-inner-shadow {
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.4);
+    }
+    .timer-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Subtle wooden slat line effect */
+    .wood-slat-divider {
+      background: linear-gradient(to right, transparent, #4A332B 25%, #4A332B 75%, transparent);
+      height: 1px;
+    }
+    /* Custom scrollbar for lap section if needed */
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #1D1210;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #4A332B;
+      border-radius: 2px;
+    }
+  </style>
+<!-- END: Custom Rustic Wood Styling -->
+</head>
+<body class="bg-[#110B0A] min-h-screen flex items-center justify-center p-4 antialiased selection:bg-foliage-600 selection:text-white">
+<!-- BEGIN: Extension Container Frame (Strict 330px width) -->
+<main class="w-[330px] rounded-2xl bg-bark-900 text-parchment-200 border-2 border-[#432D25] shadow-2xl overflow-hidden flex flex-col relative select-none" data-purpose="extension-popup-window" style="box-shadow: 0 12px 35px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(115, 78, 60, 0.2);">
+<!-- BEGIN: Header Section -->
+<header class="px-4 pt-3.5 pb-2.5 flex items-center justify-between border-b border-[#34221C] bg-bark-900" data-purpose="popup-header"><div class="flex items-center space-x-2.5"><button aria-label="Back to Timer" class="h-7 w-7 rounded-lg bg-bark-800 border border-bark-600 text-parchment-400 hover:text-parchment-200 hover:border-foliage-500 flex items-center justify-center transition-colors shadow-wood-tile active:translate-y-0.5 active:shadow-none" type="button"><svg class="w-4 h-4 fill-none stroke-current stroke-2" viewBox="0 0 24 24"><path d="M15 19l-7-7 7-7" stroke-linecap="round" stroke-linejoin="round"></path></svg></button><div class="flex flex-col"><h1 class="text-xs font-bold tracking-widest text-parchment-200 uppercase leading-none">Settings</h1><span class="text-[9px] text-parchment-500 font-medium leading-tight mt-0.5">Playback &amp; Tracking Rules</span></div></div><div class="flex items-center"><button aria-label="Close Settings" class="text-[11px] font-semibold tracking-wide text-foliage-400 hover:text-foliage-300 px-2 py-1 rounded bg-bark-800/60 border border-bark-700 hover:border-foliage-500/50 transition-colors" type="button">Save</button></div></header>
+<!-- END: Header Section -->
+<!-- BEGIN: Timer Readout & Track Info -->
+<section class="p-4 space-y-4 flex-grow" data-purpose="settings-content"><div class="space-y-2"><div class="flex items-baseline justify-between"><h2 class="text-[10px] font-bold tracking-widest text-parchment-400 uppercase">When music stops</h2><span class="text-[9px] text-foliage-400 font-medium">Auto-pause</span></div><div class="space-y-1.5"><div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-bark-850 border border-foliage-500/80 shadow-wood-tile cursor-pointer relative transition-colors"><div class="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 border-foliage-400 flex items-center justify-center"><div class="w-1.5 h-1.5 rounded-full bg-foliage-400 shadow-[0_0_6px_#72B558]"></div></div><div class="flex-grow min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-semibold text-parchment-200">Follow the music</span><span class="text-[9px] px-1.5 py-0.5 rounded bg-bark-800 text-foliage-400 border border-bark-700 font-mono">Active</span></div><p class="text-[10px] text-parchment-500 leading-snug mt-0.5">Pauses the timer as soon as music stops or tab pauses.</p></div></div><div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-bark-850/60 border border-bark-700 hover:border-bark-600 cursor-pointer transition-colors opacity-80 hover:opacity-100"><div class="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border border-bark-500 flex items-center justify-center"></div><div class="flex-grow min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-medium text-parchment-300">Only when I say</span></div><p class="text-[10px] text-parchment-500 leading-snug mt-0.5">Timer keeps ticking continuously until stopped manually.</p></div></div></div></div><div class="wood-slat-divider"></div><div class="space-y-2"><div class="flex items-baseline justify-between"><h2 class="text-[10px] font-bold tracking-widest text-parchment-400 uppercase">What the timer follows</h2><span class="text-[9px] text-parchment-500">Source match</span></div><div class="flex items-center justify-between p-1.5 rounded bg-bark-950/60 border border-bark-700/80"><span class="text-[10px] text-parchment-400 font-medium pl-1">Target timer</span><div class="relative flex items-center"><select aria-label="Target Timer" class="bg-bark-800 text-parchment-200 text-[10px] font-medium py-0.5 pl-2 pr-6 rounded border border-bark-600 focus:border-foliage-500 focus:ring-0 focus:outline-none appearance-none cursor-pointer shadow-wood-inset" style="appearance: none;"><option value="work" selected="">Work</option><option value="gaming">Gaming</option><option value="reading">Reading</option></select><svg class="w-3 h-3 text-parchment-400 absolute right-1.5 pointer-events-none fill-current" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg></div></div><div class="space-y-1.5"><div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-bark-850 border border-foliage-500/80 shadow-wood-tile cursor-pointer relative transition-colors"><div class="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border-2 border-foliage-400 flex items-center justify-center"><div class="w-1.5 h-1.5 rounded-full bg-foliage-400 shadow-[0_0_6px_#72B558]"></div></div><div class="flex-grow min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-semibold text-parchment-200">Use current</span><span class="text-[9px] px-1.5 py-0.5 rounded bg-bark-800 text-foliage-400 border border-bark-700 font-mono">Deep Focus</span></div><p class="text-[10px] text-parchment-500 leading-snug mt-0.5">Locked to the currently active album or playlist.</p></div></div><div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-bark-850/60 border border-bark-700 hover:border-bark-600 cursor-pointer transition-colors opacity-80 hover:opacity-100"><div class="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border border-bark-500 flex items-center justify-center"></div><div class="flex-grow min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-medium text-parchment-300">Any music</span></div><p class="text-[10px] text-parchment-500 leading-snug mt-0.5">Responds to playback across YouTube, YT Music &amp; Spotify.</p></div></div><div class="flex items-start gap-2.5 p-2.5 rounded-lg bg-bark-850/60 border border-bark-700 hover:border-bark-600 cursor-pointer transition-colors opacity-90 hover:opacity-100"><div class="mt-0.5 flex-shrink-0 w-3.5 h-3.5 rounded-full border border-bark-500 flex items-center justify-center"></div><div class="flex-grow min-w-0"><div class="flex items-center justify-between"><span class="text-xs font-medium text-parchment-300">Specific playlist(s)</span></div><p class="text-[10px] text-parchment-500 leading-snug mt-0.5 mb-1.5">Only ticks when this playlist or link is playing.</p><input class="w-full bg-bark-950/80 text-parchment-200 placeholder-parchment-600 text-[10px] px-2 py-1 rounded border border-bark-600 focus:border-foliage-400 focus:outline-none shadow-wood-inset transition-colors font-mono" placeholder="Deep Focus" type="text"></div></div></div></div><div class="p-2.5 rounded-lg bg-bark-950/70 border border-bark-700/80 shadow-wood-inset"><div class="flex items-center gap-1.5 text-[10px] text-parchment-400 font-medium mb-1"><svg class="w-3 h-3 text-foliage-400 flex-shrink-0 fill-current" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"></path></svg><span class="">Supported players</span></div><p class="text-[9px] text-parchment-500 leading-relaxed">Supports YouTube Music, Spotify Web, and standard YouTube video tabs automatically.</p></div></section>
+<!-- END: Timer Readout & Track Info -->
+<!-- Dividing Slat -->
+<!-- BEGIN: Laps Section -->
+<!-- END: Laps Section -->
+<!-- Dividing Slat -->
+<!-- BEGIN: Timers Management Section -->
+<footer class="px-4 py-2 bg-bark-950/70 border-t border-bark-800/80 flex items-center justify-between text-xs text-parchment-400"><div class="flex items-center gap-1.5 min-w-0"><svg class="w-2.5 h-2.5 text-foliage-400 fill-current flex-shrink-0 animate-pulse" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"></path></svg><span class="text-[10px] text-parchment-400 truncate">YouTube Music · Active</span></div><span class="text-[9px] font-mono text-parchment-500 flex-shrink-0">v1.2</span></footer>
+<!-- END: Timers Management Section -->
+<!-- BEGIN: Footer Audio Source Indicator -->
+<!-- END: Footer Audio Source Indicator -->
+</main>
+<!-- END: Extension Container Frame -->
+
+
+</body></html>
