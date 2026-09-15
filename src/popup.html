@@ -40,33 +40,36 @@
     </div>
 
     <section>
-      <button class="section-toggle" id="timersToggle" type="button" aria-expanded="true" aria-controls="timersBody">
-        <span class="section-toggle__label">
+      <div class="section-header">
+        <button class="section-toggle" id="timersToggle" type="button" aria-expanded="true" aria-controls="timersBody">
           <svg class="section-toggle__chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"></path></svg>
           <span class="section-toggle__title">Timers</span>
           <span class="section-toggle__count" id="timersCount">0</span>
-        </span>
+        </button>
+        <div class="section-header__actions" id="timersActions">
+          <button id="addTimer" class="section-action section-action--new" type="button" aria-label="New timer" title="New timer">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"></path></svg>
+          </button>
+          <button id="deleteTimer" class="section-action section-action--delete" type="button" aria-label="Delete timer" title="Delete timer">
+            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"></path></svg>
+          </button>
+        </div>
         <span class="section-toggle__summary" id="timersSummary"></span>
-      </button>
+      </div>
       <div id="timersBody">
         <div class="timer-list" id="timers"></div>
-        <div class="row">
-          <button id="addTimer">+ New</button>
-          <button id="renameTimer">Rename</button>
-          <button id="deleteTimer" class="ghost">Delete</button>
-        </div>
       </div>
     </section>
 
     <section id="lapSection" hidden>
-      <button class="section-toggle" id="lapsToggle" type="button" aria-expanded="true" aria-controls="lapsBody">
-        <span class="section-toggle__label">
+      <div class="section-header">
+        <button class="section-toggle" id="lapsToggle" type="button" aria-expanded="true" aria-controls="lapsBody">
           <svg class="section-toggle__chevron" viewBox="0 0 24 24"><path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"></path></svg>
           <span class="section-toggle__title">Laps</span>
           <span class="section-toggle__count" id="lapsCount">0</span>
-        </span>
+        </button>
         <span class="section-toggle__summary" id="lapsSummary"></span>
-      </button>
+      </div>
       <div id="lapsBody">
         <div class="lap-list" id="laps"></div>
         <p class="hint">Click a lap to rename it.</p>

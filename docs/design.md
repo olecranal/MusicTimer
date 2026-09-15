@@ -44,10 +44,13 @@ distinction cost the first pass at this.
 - **Primary action row** — Lap / Start-or-Stop / Reset, icon-only (directive 1). All three
   share one neutral button style; nothing is filled or outlined as "primary" — Stitch
   distinguishes them only by icon
-- **Timers section** — collapsible (directive 5), expanded by default: expanded shows the
-  full list with + New / Rename / Delete; collapsed shows one line, the active timer's name
-  and time. The active row shares its background with every other row - it's told apart by
-  text weight and an accent-colored time, not a highlight
+- **Timers section** — collapsible (directive 5), expanded by default. Its header row holds
+  New and Delete as small icon buttons (+ / trash) at the same height as the title - visible
+  only while expanded, since there's nothing to act on while collapsed, which shows the
+  active timer's name and time instead. There's no Rename button; double-clicking a timer's
+  name renames it, any timer in the list, not only the active one. The active row shares its
+  background with every other row - it's told apart by text weight and an accent-colored
+  time, not a highlight
 - **Laps section** — collapsible, same pattern, expanded by default; expanded shows the lap
   in progress then past laps newest-first (click one to rename); collapsed shows one line,
   `<lap name>: <time>` with no "· now" — a single summary line naming one lap is already
@@ -145,3 +148,23 @@ Never lorem ipsum — this is what real usage actually looks like:
     itself** (reconciling two static screens into one working control), and the **Start
     icon** for when a timer isn't running, which neither export ever depicts (both show the
     timer running).
+
+- **2026-09-15 — v4, Timers management moved to the header.** The full-screen export's own
+  layout was still being missed: New/Delete were a text button row (+ New / Rename / Delete)
+  under the list, not icon buttons in the header the export actually shows.
+
+  - **New and Delete are icon buttons (+ / trash) at the same height as "Timers"**, matching
+    the export exactly - `h-5 w-5` icon buttons beside the title, not a row of labeled
+    buttons below the list. They only show while expanded; collapsed, that space holds the
+    one-line summary instead, since there's nothing visible left to add to or delete from.
+  - **Rename has no button at all now** - double-clicking a timer's name is the only way in,
+    per instruction. Works on any row in the list, not only the active timer (an improvement
+    over the old button, which could only ever rename whichever timer was already active).
+  - Delete's confirm-before-deleting step still exists (deleting is destructive) but is now a
+    color change plus an `aria-label`/title swap instead of a text label swap, since there's
+    no visible text left to swap - this state isn't in either export; deleting a timer was
+    never depicted in either screen.
+
+  Verified: tsc --noEmit clean, all 5 suites pass, and drove the actual double-click-to-
+  rename, the delete arm/confirm cycle, and the header icons disappearing behind the summary
+  on collapse, in a real render.

@@ -20,6 +20,7 @@
   --button-text: #f4ede2; /* parchment-200. Stitch's export applies text-parchment-300 to these buttons, but that Tailwind color was malformed in its own config (#E7DCB, five digits) - verified in a real browser that the utility silently fails to generate, so the button text actually just inherits the card's own parchment-200, not a distinct tone */
   --warm-muted: #855e50; /* bark-400 - "recorded" label, collapsed-summary time values */
   --accent: #72b558; /* foliage-400 - dot, focus ring, mode-switch active bg */
+  --accent-light: #8bc34a; /* foliage-300 - the "New timer" icon's hover tint */
   --accent-bright: #7eb36b; /* literal - active-row time, open-lap time */
   --accent-soft: #6da25a; /* literal - the "now" word specifically */
   --accent-hover: #5f8d4e; /* foliage-500 - settings button hover border */
@@ -207,10 +208,6 @@ button.icon-button[aria-expanded="true"] {
   border-color: var(--accent-hover);
 }
 
-button.danger {
-  color: var(--danger);
-}
-
 /* -------------------------------------------------------------------- sections */
 
 section {
@@ -230,19 +227,30 @@ section h2 {
   margin: 0 0 8px;
 }
 
-/* A section's heading is a toggle: click to collapse it to one summary line. Laps and
- * Timers both use this - see popup.js's applyTimersExpanded/applyLapsExpanded. */
-.section-toggle {
-  width: 100%;
+/* A section's own header row: the collapse toggle on the left, then either management
+ * icons (Timers only, expanded) or the one-line summary (either section, collapsed) on the
+ * right - never both, see popup.js's applyTimersExpanded/applyLapsExpanded. */
+.section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Click to collapse this section to its one-line summary. Just the chevron/title/count -
+ * kept separate from the management icons beside it so neither button nests inside the
+ * other. */
+.section-toggle {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
   background: transparent;
   border: 0;
   border-radius: 6px;
   padding: 4px;
-  margin: -4px -4px 8px;
+  margin: -4px 0 -4px -4px;
   color: var(--muted-2);
   cursor: pointer;
 }
@@ -250,12 +258,6 @@ section h2 {
 .section-toggle:hover {
   background: rgba(42, 26, 22, 0.5); /* bark-800/50 */
   color: var(--text);
-}
-
-.section-toggle__label {
-  display: flex;
-  align-items: center;
-  gap: 6px;
 }
 
 .section-toggle__chevron {
@@ -286,20 +288,65 @@ section h2 {
   padding: 2px 4px;
 }
 
+/* Timers only - New/Delete, at the same height as the header, visible only while expanded
+ * (collapsed, there's nothing on screen to add to or delete from). */
+.section-header__actions {
+  display: flex;
+  gap: 6px;
+  flex: none;
+}
+
+.section-action {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.section-action svg {
+  width: 12px;
+  height: 12px;
+  fill: currentColor;
+}
+
+.section-action:active {
+  transform: translateY(1px);
+}
+
+.section-action--new svg {
+  color: var(--accent);
+}
+
+.section-action--new:hover svg {
+  color: var(--accent-light);
+}
+
+.section-action--delete:hover {
+  color: var(--danger);
+}
+
+/* Armed by a first click; a second confirms. Neither export shows this state - deleting a
+ * timer was never depicted - so this is this project's own invention, not Stitch's. */
+.section-action--confirm,
+.section-action--confirm:hover {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: var(--bg);
+}
+
 /* Shown only while the section is collapsed - the one line that replaces the full list. */
 .section-toggle__summary {
+  flex: none;
   font: 500 9px/1 ui-monospace, monospace;
   color: var(--warm-muted);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   max-width: 150px;
-}
-
-/* Only earns its keep while the full list is hidden - shown alongside it would just repeat
- * what the list already says, working against the whole point of collapsing. */
-.section-toggle[aria-expanded="true"] .section-toggle__summary {
-  display: none;
 }
 
 .section-toggle__summary .name {
@@ -415,6 +462,7 @@ footer {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text);
+  user-select: none; /* double-click renames instead of selecting the text */
 }
 
 .timer-list__row--active .timer-list__name {

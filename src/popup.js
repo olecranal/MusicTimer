@@ -31,6 +31,7 @@ const elements = {
   timersToggle: /** @type {HTMLButtonElement} */ (document.getElementById("timersToggle")),
   timersBody: document.getElementById("timersBody"),
   timersCount: document.getElementById("timersCount"),
+  timersActions: document.getElementById("timersActions"),
   timersSummary: document.getElementById("timersSummary"),
   timers: document.getElementById("timers"),
   lapSection: document.getElementById("lapSection"),
@@ -40,7 +41,6 @@ const elements = {
   lapsSummary: document.getElementById("lapsSummary"),
   laps: document.getElementById("laps"),
   addTimer: document.getElementById("addTimer"),
-  renameTimer: document.getElementById("renameTimer"),
   deleteTimer: /** @type {HTMLButtonElement} */ (document.getElementById("deleteTimer")),
   mode: document.getElementById("mode"),
   modeHint: document.getElementById("modeHint"),
@@ -180,6 +180,15 @@ function renderTimers(liveMs) {
     const name = document.createElement("span");
     name.className = "timer-list__name";
     name.textContent = timer.name;
+    name.title = "Double-click to rename";
+    // The only way to rename now - no separate button. Renames this row specifically, not
+    // only the active timer, so it works regardless of which one is currently running.
+    name.addEventListener("dblclick", (event) => {
+      event.stopPropagation(); // the row's own click handler would otherwise also select it
+      isConfirmingDelete = false;
+      editingId = timer.id;
+      render();
+    });
 
     const binding = document.createElement("span");
     binding.className = "timer-list__binding";
@@ -425,8 +434,14 @@ function render() {
   renderTimers(liveMs);
   renderLaps(liveMs);
 
-  elements.deleteTimer.textContent = isConfirmingDelete ? "Sure?" : "Delete";
-  elements.deleteTimer.classList.toggle("danger", isConfirmingDelete);
+  // Icon-only, so the confirm step is a color change instead of a text swap. Neither export
+  // shows a delete flow - deleting a timer was never depicted in either screen.
+  elements.deleteTimer.classList.toggle("section-action--confirm", isConfirmingDelete);
+  elements.deleteTimer.setAttribute(
+    "aria-label",
+    isConfirmingDelete ? "Click again to confirm delete" : "Delete timer"
+  );
+  elements.deleteTimer.title = isConfirmingDelete ? "Click again to confirm delete" : "Delete timer";
   elements.deleteTimer.disabled = snapshot.timers.length <= 1;
 
   for (const button of elements.mode.querySelectorAll("button")) {
@@ -481,15 +496,22 @@ elements.settingsToggle.addEventListener("click", () => {
 });
 applySettingsOpen();
 
-/** Also local-only: collapsing Timers/Laps to one summary line is a display choice, not state. */
+/**
+ * Also local-only: collapsing Timers/Laps to one summary line is a display choice, not
+ * state. The header row shows either the management icons or the summary, never both - New
+ * and Delete only mean anything while the list they'd act on is actually visible.
+ */
 function applyTimersExpanded() {
   elements.timersToggle.setAttribute("aria-expanded", String(timersExpanded));
   elements.timersBody.hidden = !timersExpanded;
+  elements.timersActions.hidden = !timersExpanded;
+  elements.timersSummary.hidden = timersExpanded;
 }
 
 function applyLapsExpanded() {
   elements.lapsToggle.setAttribute("aria-expanded", String(lapsExpanded));
   elements.lapsBody.hidden = !lapsExpanded;
+  elements.lapsSummary.hidden = lapsExpanded;
 }
 
 elements.timersToggle.addEventListener("click", () => {
@@ -513,12 +535,6 @@ elements.addTimer.addEventListener("click", async () => {
   isConfirmingDelete = false;
   await command(MT.ACTION.ADD_TIMER);
   editingId = snapshot.activeId; // drop straight into naming the new timer
-  render();
-});
-
-elements.renameTimer.addEventListener("click", () => {
-  isConfirmingDelete = false;
-  editingId = snapshot?.activeId || null;
   render();
 });
 
