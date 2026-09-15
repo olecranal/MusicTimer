@@ -693,6 +693,71 @@ section {
   pointer-events: none;
 }
 
+/* "Where it listens" - independently toggleable, unlike the option-cards above (which are
+ * mutually exclusive radios). Any combination is valid, including none - see popup.js's
+ * renderSiteOptions() for what an empty selection actually does. */
+.site-toggle-list {
+  display: flex;
+  gap: 6px;
+}
+
+.site-toggle {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 4px;
+  background: rgba(35, 22, 18, 0.6); /* bark-850/60 */
+}
+
+.site-toggle:hover {
+  border-color: var(--border);
+}
+
+.site-toggle--on {
+  background: var(--row-bg);
+  border-color: var(--accent);
+}
+
+.site-toggle__check {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid var(--warm-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.site-toggle--on .site-toggle__check {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+.site-toggle__check svg {
+  width: 9px;
+  height: 9px;
+  fill: var(--bg);
+  display: none;
+}
+
+.site-toggle--on .site-toggle__check svg {
+  display: block;
+}
+
+.site-toggle__label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted-2);
+  text-align: center;
+}
+
+.site-toggle--on .site-toggle__label {
+  color: var(--text);
+}
+
 .info-box {
   padding: 10px;
   border-radius: 8px;

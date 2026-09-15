@@ -12,6 +12,9 @@ type TimerMode = "auto" | "sticky";
 /** Which of a timer's three playlist-matching rules is in effect. */
 type FilterMode = "current" | "any" | "specific";
 
+/** A site the content script can report playback from - matches PlaybackReport's `site`. */
+type SiteKey = "ytmusic" | "spotify" | "youtube";
+
 /** Where the music is playing from - a playlist, album, or page context. */
 interface PlaylistContext {
   /** Stable-ish identifier, namespaced by site, e.g. "ytmusic:PL123". */
@@ -62,6 +65,12 @@ interface Timer {
   filter: PlaylistContext | null;
   /** Explicit list for "specific" mode - matches if any one entry is playing. */
   specificPlaylists: PlaylistContext[];
+  /**
+   * Which sites this timer will count at all - independent of, and applied before,
+   * filterMode. An empty array means nothing ever matches, on any site: a deliberate
+   * per-timer pause switch, not an oversight.
+   */
+  sites: SiteKey[];
   running: boolean;
   /** Epoch ms the current run began, or null when stopped. */
   runningSince: number | null;
@@ -167,6 +176,7 @@ interface CommandMessage {
   filter?: PlaylistContext | null;
   filterMode?: FilterMode;
   specificPlaylists?: PlaylistContext[];
+  sites?: SiteKey[];
 }
 
 /** One entry in the settings page's "Target timer" dropdown. */
@@ -188,6 +198,7 @@ interface SettingsSnapshot {
   filterMode: FilterMode;
   filter: PlaylistContext | null;
   specificPlaylists: PlaylistContext[];
+  sites: SiteKey[];
   /** What's playing right now, offered as the "Use current" capture target. */
   candidate: PlaylistContext | null;
 }

@@ -122,5 +122,55 @@ const secs = (ms) => Math.round(ms / 1000);
   snap = await get();
   check("work auto-claims on its bound playlist starting", snap.activeId, work);
 
+  console.log("\n--- the site toggle restricts which sites count at all ---");
+  await report(2, { playing: false, context: focus }); // done with tab 2
+  await cmd("selectTimer", { id: work });
+  await cmd("reset");
+
+  await cmd("saveTimerSettings", {
+    id: work,
+    mode: "auto",
+    filterMode: "any",
+    filter: null,
+    specificPlaylists: [],
+    sites: ["spotify"],
+  });
+
+  await report(3, { playing: true, site: "ytmusic", siteLabel: "YouTube Music" });
+  advance(5000);
+  await report(3, { playing: true, site: "ytmusic", siteLabel: "YouTube Music" });
+  s = await get();
+  check("a site not on the list does not count, even with no playlist filter", secs(s.elapsedMs), 0);
+
+  await report(3, { playing: false, site: "ytmusic", siteLabel: "YouTube Music" });
+  await report(3, { playing: true, site: "spotify", siteLabel: "Spotify" });
+  advance(6000);
+  await report(3, { playing: true, site: "spotify", siteLabel: "Spotify" });
+  s = await get();
+  check("the allowed site counts", secs(s.elapsedMs), 6);
+
+  console.log("\n--- an empty site list is a real, deliberate pause switch ---");
+  await report(3, { playing: false, site: "spotify", siteLabel: "Spotify" });
+  await cmd("saveTimerSettings", {
+    id: work,
+    mode: "auto",
+    filterMode: "any",
+    filter: null,
+    specificPlaylists: [],
+    sites: [],
+  });
+  await report(3, { playing: true, site: "spotify", siteLabel: "Spotify" });
+  advance(9999);
+  await report(3, { playing: true, site: "spotify", siteLabel: "Spotify" });
+  s = await get();
+  check("nothing counts on any site with an empty list", secs(s.elapsedMs), 6);
+  check("but the worker still sees the music playing", [s.anyPlaying, s.eligible], [true, false]);
+
+  console.log("\n--- omitting sites entirely defaults to unrestricted, not empty ---");
+  await report(3, { playing: false, site: "spotify", siteLabel: "Spotify" });
+  await cmd("saveTimerSettings", { id: work, mode: "auto", filterMode: "any", filter: null, specificPlaylists: [] });
+  const workSettingsNoSites = await settings(work);
+  check("a missing sites field falls back to every site", workSettingsNoSites.sites.sort(), ["spotify", "youtube", "ytmusic"]);
+
   finish();
 })();

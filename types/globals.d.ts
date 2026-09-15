@@ -52,6 +52,8 @@ interface MtContract {
     ANY: FilterMode;
     SPECIFIC: FilterMode;
   };
+  /** Keyed by SiteKey; the value is that site's display label. */
+  SITES: Record<SiteKey, string>;
 }
 
 /**

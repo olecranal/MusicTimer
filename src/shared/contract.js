@@ -42,5 +42,16 @@
       ANY: "any", // no filter - any music counts
       SPECIFIC: "specific", // an explicit list; matches if any one of them is playing
     },
+
+    /**
+     * Every site the content script can report from, keyed the same way a PlaybackSource's
+     * own `site` field is - named here once so a timer's site allowlist and the settings
+     * page's toggle row can't drift from what content.js actually sends.
+     */
+    SITES: {
+      ytmusic: "YouTube Music",
+      spotify: "Spotify",
+      youtube: "YouTube",
+    },
   };
 })();

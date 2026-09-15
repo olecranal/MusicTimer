@@ -49,6 +49,7 @@ const elements = {
   modeOptions: document.getElementById("modeOptions"),
   targetTimer: /** @type {HTMLSelectElement} */ (document.getElementById("targetTimer")),
   filterOptions: document.getElementById("filterOptions"),
+  siteOptions: document.getElementById("siteOptions"),
 };
 
 /** @type {PopupSnapshot | null} */
@@ -72,7 +73,7 @@ let lapsExpanded = true;
  * @type {{
  *   id: string, name: string, timers: TimerOption[], candidate: PlaylistContext | null,
  *   mode: TimerMode, filterMode: FilterMode, filter: PlaylistContext | null,
- *   specificPlaylists: { raw: string }[],
+ *   specificPlaylists: { raw: string }[], sites: SiteKey[],
  *   baselineMode: TimerMode, baselineFilterMode: FilterMode,
  * } | null}
  */
@@ -746,6 +747,40 @@ function renderFilterOptions() {
   box.append(useCurrentCard, anyMusicCard, specificCard);
 }
 
+/**
+ * The "Where it listens" row: one independently-toggleable chip per site, not a mutually
+ * exclusive set like the mode/filter cards above - any combination, including none, is valid.
+ */
+function renderSiteOptions() {
+  const box = elements.siteOptions;
+  box.innerHTML = "";
+  const draft = settingsDraft;
+
+  for (const key of Object.keys(MT.SITES)) {
+    const siteKey = /** @type {SiteKey} */ (key);
+    const on = draft.sites.includes(siteKey);
+
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "site-toggle" + (on ? " site-toggle--on" : "");
+
+    const check = document.createElement("span");
+    check.className = "site-toggle__check";
+    check.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>';
+
+    const label = document.createElement("span");
+    label.className = "site-toggle__label";
+    label.textContent = MT.SITES[siteKey];
+
+    chip.append(check, label);
+    chip.addEventListener("click", () => {
+      draft.sites = on ? draft.sites.filter((s) => s !== siteKey) : [...draft.sites, siteKey];
+      renderSiteOptions();
+    });
+    box.append(chip);
+  }
+}
+
 function renderSettingsPage() {
   const draft = settingsDraft;
 
@@ -760,6 +795,7 @@ function renderSettingsPage() {
 
   renderModeOptions();
   renderFilterOptions();
+  renderSiteOptions();
 }
 
 elements.settingsToggle.addEventListener("click", () => openSettings());
@@ -778,6 +814,7 @@ elements.settingsSave.addEventListener("click", async () => {
     filterMode: draft.filterMode,
     filter: draft.filter,
     specificPlaylists,
+    sites: draft.sites,
   });
   closeSettings();
 });

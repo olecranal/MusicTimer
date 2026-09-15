@@ -120,6 +120,7 @@ const V1 = {
   check("a timer with a captured filter infers CURRENT mode", bound.filterMode, "current");
   check("and keeps that filter", bound.filter.name, "Focus");
   check("gains an empty specific-playlists list", bound.specificPlaylists.length, 0);
+  check("and every site allowed - it never had a way to restrict this", bound.sites.sort(), ["spotify", "youtube", "ytmusic"]);
 
   const unbound = await preSettings.settings("t2");
   check("a timer with no filter infers ANY mode", unbound.filterMode, "any");

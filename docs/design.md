@@ -213,3 +213,36 @@ Never lorem ipsum — this is what real usage actually looks like:
   baseline through an unsaved change, add/remove on the specific-playlist list, a pasted
   Spotify link parsed correctly end to end through a real save, the target-timer dropdown
   discarding an unsaved edit on switch, and the back arrow discarding one on exit.
+
+- **2026-09-15 — v6, per-timer site restriction.** Jason: "create another option that lets
+  you toggle which sites it triggers on... you should be able to select any combination of
+  youtube, youtube music, and spotify including the empty set." A new "Where it listens"
+  section on the settings page, below "What the timer follows."
+
+  This is deliberately **orthogonal to `filterMode`, not folded into it.** A timer now has a
+  `sites: SiteKey[]` allowlist (`Timer.sites`) that gates matching in `matchFor()` before the
+  existing `current`/`any`/`specific` logic ever runs - a source has to clear both the site
+  gate and the filter-mode match to count. This keeps "which sites" and "which playlist"
+  as two independent questions instead of cramming a fourth axis into "Any music," and means
+  `hasBinding()` (what counts as a real auto-claim binding) is untouched - restricting sites
+  isn't itself a binding.
+
+  The three chips (`YouTube Music` / `Spotify` / `YouTube`, keyed and labeled from the new
+  `MT.SITES` map so contract.js is the one place that can drift) are independently
+  toggleable, not a radio group like the mode/filter cards above them - so unlike everywhere
+  else on this page, `buildOptionCard()` doesn't apply here and a new, simpler chip builder
+  handles them instead. **An empty selection is a real, intended state**, not an
+  edge case to guard against: it means the timer counts nothing anywhere, a deliberate
+  per-timer pause switch reachable without touching mode or filter at all. Every existing and
+  newly-migrated timer defaults to all three sites selected, so nothing already saved changes
+  behavior on upgrade.
+
+  Verified: `tsc --noEmit` clean; new coverage in `test/settings.test.js` (a disallowed site
+  never counts even under "Any music," an allowed one does, an empty list blocks every site
+  while the worker still reports music playing elsewhere, and a saved timer missing the
+  `sites` field - i.e. from before this feature - defaults to all three) plus a migration
+  assertion in `test/migration.test.js`; all 6 suites pass. Drove the real settings page in a
+  browser: all three chips render checked by default, each toggles independently of the
+  others (not mutually exclusive), clicking all three off reaches the empty set cleanly, and
+  Save followed by reopening the same timer's settings correctly reflects the saved
+  selection.

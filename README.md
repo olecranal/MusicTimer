@@ -54,7 +54,13 @@ what counts:
 Nothing here takes effect until you press **Save** — the page is a draft; the back arrow
 discards it.
 
-**5. Laps.** **Lap** splits the active timer the way a stopwatch does: it closes the
+**5. Where it listens.** Also on the **⚙ Settings** page, below the playlist filter: toggle
+which of YouTube Music, Spotify, and YouTube this timer counts at all. Any combination is
+valid, including none — an empty selection is a deliberate pause switch, not a bug. This
+applies before the playlist filter above: a site left off never counts, no matter what
+`filterMode` says. Every timer starts with all three sites selected.
+
+**6. Laps.** **Lap** splits the active timer the way a stopwatch does: it closes the
 stretch you were in and opens the next one, leaving the running total alone. Each lap is
 named `<timer> - lap N` and can be renamed by clicking it (or focusing it and pressing
 Enter). Laps measure counted time, so a pause in the music does not inflate them. They are

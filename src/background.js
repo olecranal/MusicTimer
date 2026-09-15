@@ -23,6 +23,9 @@ const STALE_MS = 12000; // a tab that has not reported in this long is assumed g
 const TICK_ALARM = "mt.tick";
 const TICK_PERIOD_MINUTES = 0.5;
 
+/** @type {SiteKey[]} */
+const ALL_SITES = /** @type {SiteKey[]} */ (Object.keys(MT.SITES));
+
 /**
  * @param {string} name
  * @returns {Timer}
@@ -34,6 +37,7 @@ const newTimer = (name) => ({
   filterMode: MT.FILTER_MODE.ANY,
   filter: null, // the "Use current" capture; only meaningful when filterMode is CURRENT
   specificPlaylists: [], // only meaningful when filterMode is SPECIFIC
+  sites: ALL_SITES, // unrestricted by default - every existing timer already assumed this
   running: false,
   runningSince: null,
   accumulatedMs: 0,
@@ -102,6 +106,9 @@ function normalize(raw) {
       timer.filterMode = timer.filter ? MT.FILTER_MODE.CURRENT : MT.FILTER_MODE.ANY;
     }
     if (!Array.isArray(timer.specificPlaylists)) timer.specificPlaylists = [];
+    // Timers stored before the site toggle existed implicitly counted every site - keep
+    // that the default rather than silently narrowing an upgraded timer to nothing.
+    if (!Array.isArray(timer.sites)) timer.sites = ALL_SITES;
   }
   state.version = 2;
   return state;
@@ -213,13 +220,19 @@ function hasBinding(timer) {
 }
 
 /**
- * The first playing source that a timer's filter accepts, if any.
+ * The first playing source that a timer accepts, if any - it must come from a site the
+ * timer is listening to at all, and then satisfy whichever filter mode is in effect. An
+ * empty `sites` list means nothing on any site ever gets this far: a deliberate per-timer
+ * pause switch, not a case to special-case around.
  * @param {Timer} timer
  * @param {PlaybackSource[]} playing
  * @returns {PlaybackSource | null}
  */
 function matchFor(timer, playing) {
-  return playing.find((s) => timerMatches(timer, s.context)) || null;
+  return (
+    playing.find((s) => timer.sites.includes(/** @type {SiteKey} */ (s.site)) && timerMatches(timer, s.context)) ||
+    null
+  );
 }
 
 /**
@@ -465,12 +478,18 @@ async function command(msg) {
       target.specificPlaylists = Array.isArray(msg.specificPlaylists)
         ? msg.specificPlaylists.slice(0, MAX_SPECIFIC_PLAYLISTS)
         : [];
+      // Array.isArray, not a truthiness check - an explicit [] means "no sites, ever" and
+      // must be kept as-is; only a genuinely missing field falls back to unrestricted.
+      target.sites = Array.isArray(msg.sites)
+        ? msg.sites.filter((site) => site in MT.SITES)
+        : ALL_SITES;
       state.lastClaim = null; // let the new binding take effect immediately
       log.info("settings:saved", {
         timerId: target.id,
         mode: target.mode,
         filterMode: target.filterMode,
         specificCount: target.specificPlaylists.length,
+        sites: target.sites,
       });
       break;
     }
@@ -570,6 +589,7 @@ async function settingsForTimer(requestedId) {
     filterMode: timer.filterMode,
     filter: timer.filter,
     specificPlaylists: timer.specificPlaylists,
+    sites: timer.sites,
     candidate: await candidateContext(),
   };
 }
