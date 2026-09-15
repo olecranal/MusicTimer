@@ -31,13 +31,26 @@
   box-sizing: border-box;
 }
 
+html {
+  /* Chrome/Edge cap an extension popup's own window at 600px tall. Past that, the popup
+   * gets a native scrollbar it decides how to place - not always reliably. Capping and
+   * scrolling the content ourselves, inside that budget, means we control it instead: with
+   * several timers and several laps (all real, ordinary usage - not a stress test) this
+   * page already reaches 700px+, and the footer is the last thing in it, so it is the
+   * first thing lost if this is left to chance. */
+  max-height: 600px;
+}
+
 body {
   width: 330px;
+  max-height: 600px;
   margin: 0;
   padding: 14px;
   background: var(--bg);
   color: var(--text);
   font: 13px/1.45 "Segoe UI", system-ui, sans-serif;
+  overflow-y: auto;
+  overflow-x: hidden;
   /* This is a control surface, not a page of text to select - without this, the browser's
    * default text cursor and selection highlight show up over every label, count and time
    * value, as if the whole popup were editable. Only the rename fields opt back in below. */
